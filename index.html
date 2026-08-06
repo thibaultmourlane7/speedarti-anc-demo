@@ -3,61 +3,62 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0b66ff" />
+  <meta name="theme-color" content="#2563eb" />
   <title>SpeedArti — Chiffrage Plaquiste V2</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
-<body>
+<body class="module-page">
   <div id="app" class="app-shell">
-    <header class="topbar">
-      <div class="brand-block">
-        <div class="brand-mark" aria-hidden="true">S</div>
-        <div>
-          <div class="brand-name">SpeedArti</div>
-          <div class="brand-subtitle">Chiffrage métier — Plaquiste V2</div>
-        </div>
-      </div>
-      <div class="topbar-actions">
-        <span class="status-chip"><span class="status-dot"></span> Module autonome</span>
-        <a class="btn btn-secondary" href="./questions-guillaume.html">Questions Guillaume</a>
-        <a class="btn btn-secondary" href="./connecteurs.html">Connecteurs</a>
-        <button id="saveDraftBtn" class="btn btn-secondary" type="button">Enregistrer le brouillon</button>
-        <button id="calculateTopBtn" class="btn btn-primary" type="button">Calculer le chiffrage</button>
-      </div>
-    </header>
-
-    <div class="workspace">
-      <aside class="sidebar">
-        <div class="project-card">
-          <span class="eyebrow">Dossier en cours</span>
-          <strong id="projectNameSide">Nouveau chiffrage</strong>
-          <span id="projectMetaSide">0 ouvrage actif</span>
-        </div>
-        <nav id="stepper" class="stepper" aria-label="Étapes du chiffrage"></nav>
-        <div class="safety-note">
-          <strong>Aucune valeur cachée</strong>
-          <p>Chaque donnée saisie est balisée, contrôlée et reliée à un calcul ou une alerte.</p>
-        </div>
-      </aside>
-
-      <main class="main-content">
-        <div id="globalAlertHost" class="global-alert-host" aria-live="polite"></div>
-        <section id="stepContent" class="step-content"></section>
-        <div class="step-navigation">
-          <button id="prevBtn" class="btn btn-secondary" type="button">← Étape précédente</button>
-          <div class="step-nav-right">
-            <span id="autosaveLabel" class="autosave-label">Brouillon local prêt</span>
-            <button id="nextBtn" class="btn btn-primary" type="button">Étape suivante →</button>
+    <div class="legacy-container">
+      <section class="wizard-shell">
+        <header class="topbar">
+          <div class="brand-block">
+            <div class="brand-mark" aria-hidden="true">S</div>
+            <div>
+              <div class="brand-name">Nouveau Chiffrage de Chantier</div>
+              <div class="brand-subtitle">Métier : Plaquiste — plan 2D interactif — moteur V2.1</div>
+            </div>
           </div>
+          <div class="topbar-actions">
+            <span class="status-chip"><span class="status-dot"></span> Moteur V2 actif</span>
+            <a class="btn btn-secondary" href="./connecteurs.html">Connecteurs</a>
+            <button id="saveDraftBtn" class="btn btn-secondary" type="button">Enregistrer</button>
+            <button id="calculateTopBtn" class="btn btn-primary" type="button">Calculer</button>
+          </div>
+        </header>
+
+        <div class="wizard-progress-area">
+          <div class="project-card">
+            <div>
+              <span class="eyebrow">Dossier en cours</span>
+              <strong id="projectNameSide">Nouveau chiffrage</strong>
+            </div>
+            <span id="projectMetaSide">0 ouvrage actif</span>
+          </div>
+          <nav id="stepper" class="stepper" aria-label="Étapes du chiffrage"></nav>
         </div>
-      </main>
+
+        <div class="workspace">
+          <main class="main-content">
+            <div id="globalAlertHost" class="global-alert-host" aria-live="polite"></div>
+            <section id="stepContent" class="step-content"></section>
+            <div class="step-navigation">
+              <button id="prevBtn" class="btn btn-secondary" type="button">← Précédent</button>
+              <div class="step-nav-right">
+                <span id="autosaveLabel" class="autosave-label">Brouillon local prêt</span>
+                <button id="nextBtn" class="btn btn-primary" type="button">Suivant →</button>
+              </div>
+            </div>
+          </main>
+        </div>
+      </section>
 
       <aside class="summary-panel">
-        <div class="summary-card sticky-card">
+        <div class="summary-card">
           <div class="summary-title-row">
             <div>
-              <span class="eyebrow">Aperçu en direct</span>
-              <h2>Récapitulatif</h2>
+              <span class="eyebrow">Aperçu du chiffrage</span>
+              <h2>Récapitulatif en direct</h2>
             </div>
             <span id="engineBadge" class="engine-badge">V2</span>
           </div>
@@ -75,9 +76,14 @@
             <div><span>Champs suivis</span><strong id="summaryFields">0</strong></div>
           </div>
           <button id="calculateSideBtn" class="btn btn-primary btn-block" type="button">Mettre à jour le calcul</button>
-          <p class="summary-hint">Les montants utilisent le catalogue et les paramètres de démonstration, jamais des valeurs silencieuses.</p>
+          <p class="summary-hint">Version 0.5.0 : plans 2D interactifs des pièces, murs A/B/C/D cliquables et ouvertures visualisées, sans calcul parallèle.</p>
         </div>
       </aside>
+
+      <div class="safety-note">
+        <strong>Traçabilité conservée</strong>
+        <p>Chaque donnée saisie reste balisée et reliée à un calcul, une commande, une alerte ou une justification.</p>
+      </div>
     </div>
   </div>
 
