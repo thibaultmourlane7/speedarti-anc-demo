@@ -1,4 +1,4 @@
-# SpeedArti — Module Plaquiste V2
+# SpeedArti — Module Plaquiste V4
 
 Démonstration publique de la branche `feature/chiffrage-plaquiste-v2`.
 
