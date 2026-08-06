@@ -2,11 +2,7 @@
   'use strict';
   const registry = Object.create(null);
   const cache = Object.create(null);
-
-  function define(name, deps, factory) {
-    registry[name] = { deps, factory };
-  }
-
+  function define(name, deps, factory) { registry[name] = { deps, factory }; }
   function load(name) {
     if (Object.prototype.hasOwnProperty.call(cache, name)) return cache[name];
     const record = registry[name];
@@ -14,16 +10,11 @@
     const exports = {};
     cache[name] = exports;
     const localRequire = (dependency) => load(dependency);
-    const args = record.deps.map((dependency) => {
-      if (dependency === 'require') return localRequire;
-      if (dependency === 'exports') return exports;
-      return load(dependency);
-    });
+    const args = record.deps.map((dependency) => dependency === 'require' ? localRequire : dependency === 'exports' ? exports : load(dependency));
     const returned = record.factory.apply(global, args);
     if (returned !== undefined) cache[name] = returned;
     return cache[name];
   }
-
   global.define = define;
   global.__plaquisteAmdLoad = load;
 })(globalThis);
@@ -44,6 +35,138 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 define("core/types", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+});
+define("core/config", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.DEFAULT_PLAQUISTE_CONFIG = void 0;
+    const validated = (value, source, note) => ({
+        value,
+        status: 'validated',
+        source,
+        ...(note ? { note } : {}),
+    });
+    const provisional = (value, source, note) => ({
+        value,
+        status: 'provisional',
+        source,
+        ...(note ? { note } : {}),
+    });
+    const unresolved = (value, source, note) => ({
+        value,
+        status: 'unresolved',
+        source,
+        ...(note ? { note } : {}),
+    });
+    const plateSurcharges = {
+        BA13_STANDARD: validated(0, 'notice-section-9.1'),
+        BA13_HYDRO: validated(85, 'notice-section-9.1', '0,85 €/m² acheté'),
+        BA13_PHONIQUE: validated(135, 'notice-section-9.1', '1,35 €/m² acheté'),
+        BA13_FEU: validated(200, 'notice-section-9.1', '2,00 €/m² acheté'),
+        HABITO: validated(320, 'notice-section-9.1', '3,20 €/m² acheté'),
+        BA10: unresolved(0, 'absence-de-valeur', 'Aucune plus-value validée dans la notice.'),
+        BA15: unresolved(0, 'absence-de-valeur', 'Aucune plus-value validée dans la notice.'),
+        BA18: unresolved(0, 'absence-de-valeur', 'Aucune plus-value validée dans la notice.'),
+        FERMACELL: unresolved(0, 'absence-de-valeur', 'Aucune plus-value validée dans la notice.'),
+    };
+    exports.DEFAULT_PLAQUISTE_CONFIG = {
+        version: 'plaquiste-config-2026-08-05-v2',
+        plate: {
+            widthM: validated(1.2, 'notice-section-9'),
+            lossPct: validated(7, 'questionnaire-guillaume-2026-08-05-q1', 'Murs : 7 % en plus du calcul par formats commerciaux.'),
+            ceilingLossPct: validated(10, 'questionnaire-guillaume-2026-08-05-q1', 'Plafonds droits : 10 %.'),
+            slopedCeilingLossPct: validated(12, 'questionnaire-guillaume-2026-08-05-q1', 'Plafonds rampants : 12 %.'),
+            surchargePurchaseCentsPerM2: plateSurcharges,
+        },
+        frame: {
+            lossPct: validated(5, 'notice-section-10'),
+        },
+        insulation: {
+            lossPct: validated(10, 'questionnaire-guillaume-2026-08-05-q8', 'Panneaux et rouleaux.'),
+            blownLossPct: validated(3, 'questionnaire-guillaume-2026-08-05-q8', 'Isolants soufflés.'),
+            secondLayerLaborSaleCentsPerM2: validated(300, 'notice-section-12', 'Plus-value de pose, matière calculée couche par couche.'),
+            crossedInstallationLaborCoefficient: validated(1.15, 'questionnaire-guillaume-2026-08-05-q10', 'Uniquement si deux couches et pose croisée cochée.'),
+            semiRigidMaterialCoefficient: validated(1.2, 'questionnaire-guillaume-2026-08-05-q10', 'Appliqué au coût d’achat matière avant marge.'),
+            semiRigidLaborCoefficient: validated(1.2, 'questionnaire-guillaume-2026-08-05-q10', 'La portée exacte dans les temps globaux reste signalée dans la trace.'),
+            pareVapeurSaleCentsPerM2: validated(350, 'questionnaire-guillaume-2026-08-05-q11', 'Prix de vente direct.'),
+            freinVapeurSaleCentsPerM2: validated(500, 'questionnaire-guillaume-2026-08-05-q11', 'Membrane hygrovariable = frein-vapeur, prix de vente direct.'),
+        },
+        optima: {
+            supportVerticalSpacingM: validated(1.35, 'questionnaire-guillaume-2026-08-05-q4'),
+            furringMlM2: validated(1.8, 'questionnaire-guillaume-2026-08-05-q4'),
+            clipTrackMlM2: validated(0.9, 'questionnaire-guillaume-2026-08-05-q4'),
+            supportUnitM2: validated(0.75, 'questionnaire-guillaume-2026-08-05-q4'),
+            keyUnitM2: validated(0.75, 'questionnaire-guillaume-2026-08-05-q4'),
+            fixingUnitM2PerRow: validated(2, 'notice-section-10.2', '2 fixations/m² par rangée d’appuis.'),
+        },
+        finish: {
+            wallBandMlM2: validated(1.8, 'notice-section-13'),
+            ceilingBandMlM2: validated(2.2, 'notice-section-11.1'),
+            wallCompoundKgM2: validated(0.5, 'notice-section-13'),
+            ceilingCompoundKgM2: validated(0.6, 'notice-section-11.1'),
+            horizontalJointCompoundKgPerMl: validated(0, 'questionnaire-guillaume-2026-08-05-q3', 'Aucun complément séparé : temps et matériaux inclus dans le forfait de finition.'),
+            firstLayerScrewsWallUnitM2: provisional(25, 'notice-section-13', 'Valeur V1 explicitement laissée configurable.'),
+            screwLossPct: validated(10, 'audit-guillaume-plaquiste', 'Ajouter 10 % avant conversion en boîtes.'),
+            secondLayerScrewsUnitM2: validated(20, 'notice-section-13'),
+            firstLayerScrewsCeilingUnitM2: validated(18, 'notice-section-11.1'),
+            finishSaleCentsPerM2: {
+                aucune: validated(0, 'notice-section-13.1'),
+                bandes: validated(500, 'notice-section-13.1'),
+                pret_a_peindre: validated(900, 'notice-section-13.1'),
+                soignee: validated(1300, 'notice-section-13.1'),
+            },
+            impressionSaleCentsPerM2: validated(500, 'notice-section-13.1'),
+        },
+        labor: {
+            cloisonSimpleHoursM2: validated(0.35, 'notice-section-14'),
+            doublageOptimaHoursM2: validated(0.4, 'notice-section-14'),
+            doublageClassiqueSansIsolantHoursM2: validated(0.26, 'notice-section-14'),
+            doublageClassiqueAvecIsolantHoursM2: validated(0.32, 'notice-section-14'),
+            plafondDroitHoursM2: validated(0.4, 'notice-section-14'),
+            secondSkinExtraHoursM2: validated(0.05, 'notice-section-14'),
+            doubledStudLaborCoefficient: validated(1.5, 'audit-guillaume-plaquiste', 'Montants doublés : main-d’œuvre ×1,5.'),
+            complexityCoefficient: {
+                simple: validated(0.9, 'notice-section-14'),
+                moyenne: validated(1, 'notice-section-14'),
+                complexe: validated(1.3, 'notice-section-14'),
+            },
+        },
+        directPrices: {
+            renfortOsbCentsPerUnit: validated(7500, 'notice-section-10.3'),
+            angleSortantCentsPerMl: validated(700, 'notice-section-15'),
+            repriseExistantCents: validated(15000, 'notice-section-15'),
+            repriseExistantScope: validated('chantier', 'questionnaire-guillaume-2026-08-05-q2', 'Une seule fois par chantier/chiffrage ; montant modifiable.'),
+            accesDifficileCents: validated(45000, 'notice-section-15'),
+            heightThresholdM: validated(3.5, 'notice-section-15'),
+            heightSurchargeCentsPerM2: validated(400, 'notice-section-15'),
+            manyCutsCentsPerM2: validated(200, 'notice-section-15'),
+            rampantSimpleCentsPerM2: validated(500, 'notice-section-11.2'),
+            rampantComplexeCentsPerM2: validated(1100, 'notice-section-11.2'),
+        },
+    };
+});
+define("core/errors", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.alert = exports.PlaquisteValidationError = void 0;
+    class PlaquisteValidationError extends Error {
+        validation;
+        constructor(validation) {
+            super(`Calcul Plaquiste V2 bloqué par ${validation.blocking.length} erreur(s).`);
+            this.name = 'PlaquisteValidationError';
+            this.validation = validation;
+        }
+    }
+    exports.PlaquisteValidationError = PlaquisteValidationError;
+    const alert = (code, condition, message, level, fieldRefs, details) => ({
+        code,
+        condition,
+        message,
+        level,
+        fieldRefs,
+        ...(details ? { details } : {}),
+    });
+    exports.alert = alert;
 });
 define("core/context", ["require", "exports"], function (require, exports) {
     "use strict";
@@ -118,29 +241,6 @@ define("core/context", ["require", "exports"], function (require, exports) {
         };
     };
     exports.createCalculationContext = createCalculationContext;
-});
-define("core/errors", ["require", "exports"], function (require, exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.alert = exports.PlaquisteValidationError = void 0;
-    class PlaquisteValidationError extends Error {
-        validation;
-        constructor(validation) {
-            super(`Calcul Plaquiste V2 bloqué par ${validation.blocking.length} erreur(s).`);
-            this.name = 'PlaquisteValidationError';
-            this.validation = validation;
-        }
-    }
-    exports.PlaquisteValidationError = PlaquisteValidationError;
-    const alert = (code, condition, message, level, fieldRefs, details) => ({
-        code,
-        condition,
-        message,
-        level,
-        fieldRefs,
-        ...(details ? { details } : {}),
-    });
-    exports.alert = alert;
 });
 define("core/fieldTags", ["require", "exports"], function (require, exports) {
     "use strict";
@@ -239,8 +339,10 @@ define("core/fieldTags", ["require", "exports"], function (require, exports) {
         r(ctx, `${path}.ossature.largeurProfilMm`, wall.ossature.largeurProfilMm, 'artisan', undefined, `${t}.OSSATURE.LARGEUR_PROFIL_MM`);
         r(ctx, `${path}.ossature.entraxeMm`, wall.ossature.entraxeMm, 'artisan', undefined, `${t}.OSSATURE.ENTRAXE_MM`);
         r(ctx, `${path}.ossature.montantsDoubles`, wall.ossature.montantsDoubles, 'artisan', undefined, `${t}.OSSATURE.MONTANTS_DOUBLES`);
+        if (wall.ossature.nombreRangeesAppuis !== undefined)
+            r(ctx, `${path}.ossature.nombreRangeesAppuis`, wall.ossature.nombreRangeesAppuis, 'artisan', undefined, `${t}.OSSATURE.RANGEES_APPUIS`);
         if (wall.ossature.nombreAppuisParM2 !== undefined)
-            r(ctx, `${path}.ossature.nombreAppuisParM2`, wall.ossature.nombreAppuisParM2, 'artisan', undefined, `${t}.OSSATURE.APPUIS_PAR_M2`);
+            r(ctx, `${path}.ossature.nombreAppuisParM2`, wall.ossature.nombreAppuisParM2, 'system', 'Ancien champ lu puis normalisé vers nombreRangeesAppuis.', `${t}.OSSATURE.APPUIS_PAR_M2_LEGACY`);
         if (wall.isolation)
             registerIsolation(ctx, `${path}.isolation`, wall.isolation, wall.id);
         wall.ouvertures.forEach((opening, index) => {
@@ -295,6 +397,7 @@ define("core/fieldTags", ["require", "exports"], function (require, exports) {
         r(ctx, `${path}.active`, isolation.active, 'artisan', undefined, `${t}.ACTIVE`);
         r(ctx, `${path}.pareVapeur`, isolation.pareVapeur, 'artisan', undefined, `${t}.PARE_VAPEUR`);
         r(ctx, `${path}.freinVapeur`, isolation.freinVapeur, 'artisan', undefined, `${t}.FREIN_VAPEUR`);
+        r(ctx, `${path}.poseCroisee`, isolation.poseCroisee ?? false, 'artisan', undefined, `${t}.POSE_CROISEE`);
         isolation.couches.forEach((layer, index) => {
             const p = `${path}.couches[${index}]`;
             const lt = `${t}.COUCHE.${layer.id}`;
@@ -303,6 +406,7 @@ define("core/fieldTags", ["require", "exports"], function (require, exports) {
             r(ctx, `${p}.epaisseurMm`, layer.epaisseurMm, 'artisan', undefined, `${lt}.EPAISSEUR_MM`);
             if (layer.prixAchatM2OverrideCents !== undefined)
                 r(ctx, `${p}.prixAchatM2OverrideCents`, layer.prixAchatM2OverrideCents, 'artisan', undefined, `${lt}.PRIX_ACHAT_M2_OVERRIDE_CENTS`);
+            r(ctx, `${p}.semiRigide`, layer.semiRigide ?? false, 'artisan', undefined, `${lt}.SEMI_RIGIDE`);
         });
     };
     const registerFinish = (ctx, path, finish, tagBase) => {
@@ -319,7 +423,13 @@ define("core/fieldTags", ["require", "exports"], function (require, exports) {
             r(ctx, 'overrides.materialPricing.value', input.overrides.materialPricing.value, 'artisan', undefined, 'PLQ.OVERRIDE.MATERIAL_PRICING.VALUE');
         }
         if (input.overrides.pertePlaquesPct !== undefined)
-            r(ctx, 'overrides.pertePlaquesPct', input.overrides.pertePlaquesPct, 'artisan', undefined, 'PLQ.OVERRIDE.PERTE_PLAQUES_PCT');
+            r(ctx, 'overrides.pertePlaquesPct', input.overrides.pertePlaquesPct, 'artisan', 'Ancien override global conservé pour compatibilité.', 'PLQ.OVERRIDE.PERTE_PLAQUES_PCT');
+        if (input.overrides.pertePlaquesMurPct !== undefined)
+            r(ctx, 'overrides.pertePlaquesMurPct', input.overrides.pertePlaquesMurPct, 'artisan', undefined, 'PLQ.OVERRIDE.PERTE_PLAQUES_MUR_PCT');
+        if (input.overrides.pertePlaquesPlafondPct !== undefined)
+            r(ctx, 'overrides.pertePlaquesPlafondPct', input.overrides.pertePlaquesPlafondPct, 'artisan', undefined, 'PLQ.OVERRIDE.PERTE_PLAQUES_PLAFOND_PCT');
+        if (input.overrides.pertePlaquesRampantPct !== undefined)
+            r(ctx, 'overrides.pertePlaquesRampantPct', input.overrides.pertePlaquesRampantPct, 'artisan', undefined, 'PLQ.OVERRIDE.PERTE_PLAQUES_RAMPANT_PCT');
         Object.entries(input.overrides.quantitesMateriaux ?? {}).forEach(([key, value]) => r(ctx, `overrides.quantitesMateriaux.${key}`, value, 'artisan', undefined, `PLQ.OVERRIDE.QUANTITE.${key}`));
         Object.entries(input.overrides.prixVenteLignesCents ?? {}).forEach(([key, value]) => r(ctx, `overrides.prixVenteLignesCents.${key}`, value, 'artisan', undefined, `PLQ.OVERRIDE.PRIX_VENTE.${key}`));
         Object.entries(input.overrides.tauxTvaLignes ?? {}).forEach(([key, value]) => r(ctx, `overrides.tauxTvaLignes.${key}`, value, 'artisan', undefined, `PLQ.OVERRIDE.TVA.${key}`));
@@ -341,10 +451,12 @@ define("core/normalize", ["require", "exports"], function (require, exports) {
     };
     const normalizeIsolation = (isolation, ownerId) => ({
         ...isolation,
+        poseCroisee: isolation.poseCroisee ?? false,
         couches: isolation.couches.map((layer, index) => ({
             ...layer,
             id: layer.id || `${ownerId}:isolation-layer:${index + 1}`,
             epaisseurMm: cleanNumber(layer.epaisseurMm),
+            semiRigide: layer.semiRigide ?? false,
         })),
     });
     const normalizeWall = (wall, source, pieceId) => {
@@ -358,6 +470,16 @@ define("core/normalize", ["require", "exports"], function (require, exports) {
             hauteurM: cleanNumber(wall.hauteurM),
             nombreAnglesSortants: cleanNumber(wall.nombreAnglesSortants ?? 0),
             parements: wall.parements.map(normalizeParement),
+            ossature: {
+                ...wall.ossature,
+                ...(wall.ossature.systeme === 'optima'
+                    ? {
+                        nombreRangeesAppuis: wall.ossature.nombreRangeesAppuis ??
+                            wall.ossature.nombreAppuisParM2 ??
+                            Math.max(1, Math.ceil(cleanNumber(wall.hauteurM) / 1.35)),
+                    }
+                    : {}),
+            },
             ...(isolation ? { isolation: normalizeIsolation(isolation, wall.id) } : {}),
             ouvertures: wall.ouvertures.map((opening) => ({
                 ...opening,
@@ -510,13 +632,28 @@ define("core/validate", ["require", "exports", "core/errors", "core/modelUtils"]
                     ]));
                 }
             }
-            if (wall.ossature.systeme === 'optima' && !wall.ossature.nombreAppuisParM2) {
-                push(result, (0, errors_js_1.alert)('PLQ-V2-015', 'Système Optima sans nombre d’appuis par m²', 'Renseignez le nombre d’appuis par m². Aucun nombre d’appuis ne sera inventé.', 'blocking', [`${path}.ossature.systeme`, `${path}.ossature.nombreAppuisParM2`]));
+            if (wall.ossature.systeme === 'optima' &&
+                (!wall.ossature.nombreRangeesAppuis || wall.ossature.nombreRangeesAppuis <= 0)) {
+                push(result, (0, errors_js_1.alert)('PLQ-V2-015', 'Système Optima sans nombre de rangées d’appuis', 'Le nombre de rangées d’appuis doit être supérieur à zéro. La proposition automatique suit un appui tous les 1,35 m.', 'blocking', [`${path}.ossature.systeme`, `${path}.ossature.nombreRangeesAppuis`]));
             }
             if (wall.isolation?.active &&
                 wall.typeParoi !== 'doublage' &&
                 (wall.isolation.pareVapeur || wall.isolation.freinVapeur)) {
-                push(result, (0, errors_js_1.alert)('PLQ-V2-029', 'Membrane sélectionnée hors doublage', 'La règle validée à 7 €/m² est limitée à la surface isolée en doublage. Une validation métier distincte est nécessaire pour une cloison.', 'blocking', [`${path}.typeParoi`, `${path}.isolation.pareVapeur`, `${path}.isolation.freinVapeur`]));
+                push(result, (0, errors_js_1.alert)('PLQ-V2-029', 'Membrane sélectionnée hors doublage', 'Les nouveaux prix directs de membrane restent limités au doublage, faute de réponse étendant leur portée à la cloison.', 'blocking', [`${path}.typeParoi`, `${path}.isolation.pareVapeur`, `${path}.isolation.freinVapeur`]));
+            }
+            if (wall.isolation?.active) {
+                const isolationPath = `${path}.isolation`;
+                ctx.fields.consume(`${isolationPath}.poseCroisee`, 'validation');
+                if (wall.isolation.poseCroisee && wall.isolation.couches.length !== 2) {
+                    push(result, (0, errors_js_1.alert)('PLQ-V2-035', 'Pose croisée sans deux couches', 'La pose croisée est disponible uniquement lorsque deux couches d’isolant sont sélectionnées.', 'blocking', [`${isolationPath}.poseCroisee`, `${isolationPath}.couches`]));
+                }
+                wall.isolation.couches.forEach((layer, layerIndex) => {
+                    const layerPath = `${isolationPath}.couches[${layerIndex}]`;
+                    ctx.fields.consume(`${layerPath}.semiRigide`, 'validation');
+                    if (layer.epaisseurMm > wall.ossature.largeurProfilMm) {
+                        push(result, (0, errors_js_1.alert)('PLQ-V2-W004', 'Épaisseur d’isolant supérieure au profil', `L’isolant de ${layer.epaisseurMm} mm dépasse le profil de ${wall.ossature.largeurProfilMm} mm. Le calcul reste autorisé mais l’artisan doit confirmer la configuration.`, 'warning', [`${layerPath}.epaisseurMm`, `${path}.ossature.largeurProfilMm`]));
+                    }
+                });
             }
             wall.parements.forEach((parement, index) => {
                 const p = `${path}.parements[${index}]`;
@@ -562,8 +699,11 @@ define("core/validate", ["require", "exports", "core/errors", "core/modelUtils"]
             ctx.fields.consume(`${path}.ossature.largeurProfilMm`, 'validation');
             ctx.fields.consume(`${path}.ossature.entraxeMm`, 'validation');
             ctx.fields.consume(`${path}.ossature.montantsDoubles`, 'validation');
+            if (wall.ossature.nombreRangeesAppuis !== undefined) {
+                ctx.fields.consume(`${path}.ossature.nombreRangeesAppuis`, 'validation');
+            }
             if (wall.ossature.nombreAppuisParM2 !== undefined) {
-                ctx.fields.consume(`${path}.ossature.nombreAppuisParM2`, 'validation');
+                ctx.fields.consume(`${path}.ossature.nombreAppuisParM2`, 'validation', 'Ancien champ normalisé vers le nombre de rangées.');
             }
             wall.renforts.forEach((reinforcement, index) => {
                 const p = `${path}.renforts[${index}]`;
@@ -611,7 +751,7 @@ define("core/validate", ["require", "exports", "core/errors", "core/modelUtils"]
             }
             if (ceiling.isolation?.active &&
                 (ceiling.isolation.pareVapeur || ceiling.isolation.freinVapeur)) {
-                push(result, (0, errors_js_1.alert)('PLQ-V2-029', 'Membrane sélectionnée au plafond sans règle validée', 'La règle validée à 7 €/m² concerne le doublage. Aucun prix automatique de membrane plafond ne doit être appliqué sans validation métier.', 'blocking', [`${p}.isolation.pareVapeur`, `${p}.isolation.freinVapeur`]));
+                push(result, (0, errors_js_1.alert)('PLQ-V2-029', 'Membrane sélectionnée au plafond sans règle validée', 'Les prix directs de pare-vapeur et membrane hygrovariable restent validés pour le doublage uniquement. Aucun prix automatique n’est appliqué au plafond.', 'blocking', [`${p}.isolation.pareVapeur`, `${p}.isolation.freinVapeur`]));
             }
             if (!ceiling.actif) {
                 if (ceiling.isolation)
@@ -737,6 +877,9 @@ define("core/validate", ["require", "exports", "core/errors", "core/modelUtils"]
         const hasManualOverride = input.overrides.tauxHoraireCents !== undefined ||
             input.overrides.materialPricing !== undefined ||
             input.overrides.pertePlaquesPct !== undefined ||
+            input.overrides.pertePlaquesMurPct !== undefined ||
+            input.overrides.pertePlaquesPlafondPct !== undefined ||
+            input.overrides.pertePlaquesRampantPct !== undefined ||
             input.overrides.quantitesMateriaux !== undefined ||
             input.overrides.prixVenteLignesCents !== undefined ||
             input.overrides.tauxTvaLignes !== undefined;
@@ -747,6 +890,15 @@ define("core/validate", ["require", "exports", "core/errors", "core/modelUtils"]
             ctx.fields.consume('overrides.motif', 'validation');
         if (input.overrides.pertePlaquesPct !== undefined) {
             ctx.fields.consume('overrides.pertePlaquesPct', 'validation');
+        }
+        if (input.overrides.pertePlaquesMurPct !== undefined) {
+            ctx.fields.consume('overrides.pertePlaquesMurPct', 'validation');
+        }
+        if (input.overrides.pertePlaquesPlafondPct !== undefined) {
+            ctx.fields.consume('overrides.pertePlaquesPlafondPct', 'validation');
+        }
+        if (input.overrides.pertePlaquesRampantPct !== undefined) {
+            ctx.fields.consume('overrides.pertePlaquesRampantPct', 'validation');
         }
         if (catalogue.articles.length === 0) {
             push(result, (0, errors_js_1.alert)('PLQ-V2-006', 'Catalogue vide', 'Aucun article Plaquiste n’est disponible dans le catalogue.', 'blocking', []));
@@ -819,6 +971,9 @@ define("core/validate", ["require", "exports", "core/errors", "core/modelUtils"]
         ctx.fields.consume(`${path}.ossature.largeurProfilMm`, 'validation');
         ctx.fields.consume(`${path}.ossature.entraxeMm`, 'validation');
         ctx.fields.consume(`${path}.ossature.montantsDoubles`, 'validation');
+        if (wall.ossature.nombreRangeesAppuis !== undefined) {
+            ctx.fields.consume(`${path}.ossature.nombreRangeesAppuis`, 'validation');
+        }
         if (wall.ossature.nombreAppuisParM2 !== undefined) {
             ctx.fields.consume(`${path}.ossature.nombreAppuisParM2`, 'validation');
         }
@@ -848,6 +1003,7 @@ define("core/validate", ["require", "exports", "core/errors", "core/modelUtils"]
         ctx.fields.consume(`${path}.active`, 'validation', note);
         ctx.fields.consume(`${path}.pareVapeur`, 'validation', note);
         ctx.fields.consume(`${path}.freinVapeur`, 'validation', note);
+        ctx.fields.consume(`${path}.poseCroisee`, 'validation', note);
         isolation.couches.forEach((layer, index) => {
             const p = `${path}.couches[${index}]`;
             ctx.fields.consume(`${p}.id`, 'validation', note);
@@ -856,6 +1012,7 @@ define("core/validate", ["require", "exports", "core/errors", "core/modelUtils"]
             if (layer.prixAchatM2OverrideCents !== undefined) {
                 ctx.fields.consume(`${p}.prixAchatM2OverrideCents`, 'validation', note);
             }
+            ctx.fields.consume(`${p}.semiRigide`, 'validation', note);
         });
     };
 });
@@ -929,27 +1086,47 @@ define("core/engines/ceilingEngine", ["require", "exports", "core/catalogueUtils
             }
             else {
                 const plateArea = plate.widthM * plate.heightM;
-                const requiredSurface = surface * 1.05 * ceiling.nombrePeaux;
+                const defaultLossPct = ceiling.type === 'droit'
+                    ? config.plate.ceilingLossPct.value
+                    : config.plate.slopedCeilingLossPct.value;
+                const lossPct = ceiling.type === 'droit'
+                    ? input.overrides.pertePlaquesPlafondPct ??
+                        input.overrides.pertePlaquesPct ??
+                        defaultLossPct
+                    : input.overrides.pertePlaquesRampantPct ??
+                        input.overrides.pertePlaquesPct ??
+                        defaultLossPct;
+                if (ceiling.type === 'droit' && input.overrides.pertePlaquesPlafondPct !== undefined) {
+                    ctx.fields.consume('overrides.pertePlaquesPlafondPct', 'ceiling');
+                }
+                if (ceiling.type !== 'droit' && input.overrides.pertePlaquesRampantPct !== undefined) {
+                    ctx.fields.consume('overrides.pertePlaquesRampantPct', 'ceiling');
+                }
+                if (input.overrides.pertePlaquesPct !== undefined) {
+                    ctx.fields.consume('overrides.pertePlaquesPct', 'ceiling', 'Ancien override global appliqué au plafond.');
+                }
+                const requiredSurface = surface * (1 + lossPct / 100) * ceiling.nombrePeaux;
                 const plateCount = Math.ceil(requiredSurface / plateArea);
                 needs.push({
                     id: `need:ceiling:plate:${piece.id}`,
                     label: `${plate.label} — plafond ${piece.nom}`,
                     quantity: plateCount,
                     unit: 'unit',
-                    lossPct: 5,
+                    lossPct,
                     articleCatalogueId: plate.id,
                     packageCandidates: (0, catalogueUtils_js_1.getPackageCandidates)([plate]),
                     inputRefs: [`${p}.typePlaque`, `${p}.nombrePeaux`],
                     metadata: {
                         surfaceM2: surface,
-                        consumptionM2PerM2: 1.05,
+                        consumptionM2PerM2: (0, money_js_1.roundQuantity)(1 + lossPct / 100),
+                        lossPct,
                         plateAreaM2: (0, money_js_1.roundQuantity)(plateArea),
                     },
                 });
                 ctx.trace({
                     engine: 'ceiling',
                     inputRefs: [`${p}.typePlaque`, `${p}.nombrePeaux`],
-                    formula: 'nbPlaquesPlafond = ceil(surface × 1,05 × nombrePeaux / surfacePlaque)',
+                    formula: 'nbPlaquesPlafond = ceil(surface × (1 + pertePlafond) × nombrePeaux / surfacePlaque)',
                     rawResult: requiredSurface / plateArea,
                     roundedResult: plateCount,
                     unit: 'plate',
@@ -1079,10 +1256,13 @@ define("core/engines/directOptionsEngine", ["require", "exports", "core/catalogu
                 });
             });
             if (wall.hauteurM > config.directPrices.heightThresholdM.value) {
+                const heightSurchargeSurfaceM2 = wall.typeParoi === 'cloison'
+                    ? wallGeometry.faces.reduce((sum, face) => sum + face.netM2, 0)
+                    : wallGeometry.netOneSideM2;
                 directSales.push({
                     id: `sale:height:${wall.id}`,
                     label: `Plus-value grande hauteur — ${wall.label}`,
-                    quantity: wallGeometry.netOneSideM2,
+                    quantity: heightSurchargeSurfaceM2,
                     unit: 'm2',
                     unitSaleHtCents: config.directPrices.heightSurchargeCentsPerM2.value,
                     source: 'direct_price',
@@ -1460,10 +1640,7 @@ define("core/engines/framingEngine", ["require", "exports", "core/catalogueUtils
             ctx.fields.consume(`${path}.ossature.entraxeMm`, 'framing');
             ctx.fields.consume(`${path}.ossature.montantsDoubles`, 'framing');
             if (wall.ossature.systeme === 'optima') {
-                if (wall.ossature.nombreAppuisParM2 !== undefined) {
-                    ctx.fields.consume(`${path}.ossature.nombreAppuisParM2`, 'framing');
-                }
-                ctx.warn((0, errors_js_5.alert)('PLQ-V2-023', 'Règles matérielles détaillées Optima non fournies', 'Le calcul Optima nécessite un jeu de règles catalogue validé. Aucun rail, appui ou fourrure ne sera inventé.', 'blocking', [`${path}.ossature.systeme`]));
+                calculateOptimaNeeds(wall, path, wallGeometry.netOneSideM2, catalogue, config, lossPct, ctx, needs);
                 return;
             }
             warnIfFramingChoiceDiffersFromValidatedSuggestion(wall, path, ctx);
@@ -1550,6 +1727,49 @@ define("core/engines/framingEngine", ["require", "exports", "core/catalogueUtils
         return needs;
     };
     exports.calculateFramingNeeds = calculateFramingNeeds;
+    const calculateOptimaNeeds = (wall, path, surfaceM2, catalogue, config, lossPct, ctx, needs) => {
+        const automaticRows = Math.max(1, Math.ceil(wall.hauteurM / config.optima.supportVerticalSpacingM.value));
+        const rows = wall.ossature.nombreRangeesAppuis ?? automaticRows;
+        ctx.fields.consume(`${path}.ossature.nombreRangeesAppuis`, 'framing');
+        if (wall.ossature.nombreAppuisParM2 !== undefined) {
+            ctx.fields.consume(`${path}.ossature.nombreAppuisParM2`, 'framing', 'Ancien champ interprété comme nombre de rangées d’appuis.');
+        }
+        if (rows !== automaticRows) {
+            ctx.warn((0, errors_js_5.alert)('PLQ-V2-W005', 'Nombre de rangées d’appuis Optima modifié', `La proposition automatique est de ${automaticRows} rangée(s) pour ${wall.hauteurM.toFixed(2)} m, selon un appui tous les 1,35 m. La valeur artisan ${rows} est conservée et tracée.`, 'warning', [`${path}.hauteurM`, `${path}.ossature.nombreRangeesAppuis`]));
+        }
+        const factor = 1 + lossPct / 100;
+        addOptimaNeed(needs, catalogue, `need:optima:furring:${wall.id}`, `Fourrures F530 Optima — ${wall.label}`, surfaceM2 * config.optima.furringMlM2.value * factor, 'ml', lossPct, [`${path}.ossature.systeme`, `${path}.hauteurM`], (article) => article.family === 'furring' &&
+            (article.metadata?.optimaKind === 'furring' || article.metadata?.usage === 'optima'), { ratePerM2: config.optima.furringMlM2.value, rows });
+        addOptimaNeed(needs, catalogue, `need:optima:clip-track:${wall.id}`, `Lisses Clip Optima — ${wall.label}`, surfaceM2 * config.optima.clipTrackMlM2.value * factor, 'ml', lossPct, [`${path}.ossature.systeme`, `${path}.hauteurM`], (article) => article.family === 'optima' && article.metadata?.optimaKind === 'clip_track', { ratePerM2: config.optima.clipTrackMlM2.value, rows });
+        addOptimaNeed(needs, catalogue, `need:optima:support:${wall.id}`, `Appuis Optima — ${wall.label}`, surfaceM2 * config.optima.supportUnitM2.value * factor, 'unit', lossPct, [`${path}.ossature.nombreRangeesAppuis`], (article) => article.family === 'optima' && article.metadata?.optimaKind === 'support', { ratePerM2: config.optima.supportUnitM2.value, rows });
+        addOptimaNeed(needs, catalogue, `need:optima:key:${wall.id}`, `Clés Optima — ${wall.label}`, surfaceM2 * config.optima.keyUnitM2.value * factor, 'unit', lossPct, [`${path}.ossature.nombreRangeesAppuis`], (article) => article.family === 'optima' && article.metadata?.optimaKind === 'key', { ratePerM2: config.optima.keyUnitM2.value, rows });
+        addOptimaNeed(needs, catalogue, `need:optima:fixing:${wall.id}`, `Fixations d’appuis Optima — ${wall.label}`, surfaceM2 * config.optima.fixingUnitM2PerRow.value * rows * factor, 'unit', lossPct, [`${path}.ossature.nombreRangeesAppuis`], (article) => article.family === 'optima' && article.metadata?.optimaKind === 'fixing', { ratePerM2PerRow: config.optima.fixingUnitM2PerRow.value, rows });
+        ctx.trace({
+            engine: 'framing',
+            inputRefs: [`${path}.hauteurM`, `${path}.ossature.nombreRangeesAppuis`],
+            formula: 'rangéesAppuis = ceil(hauteur / 1,35), modifiable ; consommations Optima = surface × taux validé × perte ossature',
+            rawResult: automaticRows,
+            roundedResult: rows,
+            unit: 'unit',
+            source: rows === automaticRows ? 'guillaume_rule' : 'manual_override',
+            warnings: [
+                'Les quantités sont calculées ; la valorisation exige les prix réels des articles Optima dans le catalogue.',
+            ],
+        });
+    };
+    const addOptimaNeed = (needs, catalogue, id, label, quantity, unit, lossPct, inputRefs, predicate, metadata) => {
+        const articles = catalogue.articles.filter(predicate);
+        needs.push({
+            id,
+            label,
+            quantity: (0, money_js_3.roundQuantity)(quantity),
+            unit,
+            lossPct,
+            packageCandidates: (0, catalogueUtils_js_4.getPackageCandidates)(articles),
+            inputRefs,
+            metadata,
+        });
+    };
     const warnIfFramingChoiceDiffersFromValidatedSuggestion = (wall, path, ctx) => {
         let suggested;
         if (wall.hauteurM <= 2.5)
@@ -1606,22 +1826,27 @@ define("core/engines/isolationEngine", ["require", "exports", "core/catalogueUti
         ctx.fields.consume(`${path}.active`, 'isolation');
         ctx.fields.consume(`${path}.pareVapeur`, 'isolation');
         ctx.fields.consume(`${path}.freinVapeur`, 'isolation');
+        ctx.fields.consume(`${path}.poseCroisee`, 'isolation');
         if (!isolation.active) {
             isolation.couches.forEach((layer, index) => {
-                ctx.fields.consume(`${path}.couches[${index}].id`, 'isolation', 'Isolation inactive.');
-                ctx.fields.consume(`${path}.couches[${index}].articleCatalogueId`, 'isolation', 'Isolation inactive.');
-                ctx.fields.consume(`${path}.couches[${index}].epaisseurMm`, 'isolation', 'Isolation inactive.');
+                const p = `${path}.couches[${index}]`;
+                ctx.fields.consume(`${p}.id`, 'isolation', 'Isolation inactive.');
+                ctx.fields.consume(`${p}.articleCatalogueId`, 'isolation', 'Isolation inactive.');
+                ctx.fields.consume(`${p}.epaisseurMm`, 'isolation', 'Isolation inactive.');
+                ctx.fields.consume(`${p}.semiRigide`, 'isolation', 'Isolation inactive.');
                 if (layer.prixAchatM2OverrideCents !== undefined) {
-                    ctx.fields.consume(`${path}.couches[${index}].prixAchatM2OverrideCents`, 'isolation', 'Isolation inactive.');
+                    ctx.fields.consume(`${p}.prixAchatM2OverrideCents`, 'isolation', 'Isolation inactive.');
                 }
             });
             return;
         }
+        const layerLosses = [];
         isolation.couches.forEach((layer, index) => {
             const p = `${path}.couches[${index}]`;
             ctx.fields.consume(`${p}.id`, 'isolation');
             ctx.fields.consume(`${p}.articleCatalogueId`, 'isolation');
             ctx.fields.consume(`${p}.epaisseurMm`, 'isolation');
+            ctx.fields.consume(`${p}.semiRigide`, 'isolation');
             if (layer.prixAchatM2OverrideCents !== undefined) {
                 ctx.fields.consume(`${p}.prixAchatM2OverrideCents`, 'isolation');
             }
@@ -1630,41 +1855,68 @@ define("core/engines/isolationEngine", ["require", "exports", "core/catalogueUti
                 ctx.warn((0, errors_js_6.alert)('PLQ-V2-006', 'Article isolant introuvable', `L’article d’isolation ${layer.articleCatalogueId} est introuvable dans le catalogue.`, 'blocking', [`${p}.articleCatalogueId`]));
                 return;
             }
-            const quantity = surfaceM2 * (1 + config.insulation.lossPct.value / 100);
-            const candidates = (0, catalogueUtils_js_5.getPackageCandidates)([article]);
+            const isBlown = article.metadata?.insulationKind === 'blown';
+            const lossPct = isBlown ? config.insulation.blownLossPct.value : config.insulation.lossPct.value;
+            layerLosses.push(lossPct);
+            const quantity = surfaceM2 * (1 + lossPct / 100);
+            const materialCoefficient = layer.semiRigide
+                ? config.insulation.semiRigidMaterialCoefficient.value
+                : 1;
+            const candidates = (0, catalogueUtils_js_5.getPackageCandidates)([article]).map((candidate) => ({
+                ...candidate,
+                packagePriceHtCents: Math.round(candidate.packagePriceHtCents * materialCoefficient),
+            }));
             if (layer.prixAchatM2OverrideCents !== undefined && article.packageQuantity > 0) {
                 candidates.splice(0, candidates.length, {
                     articleId: article.id,
                     packageQuantity: article.packageQuantity,
-                    packagePriceHtCents: Math.round(layer.prixAchatM2OverrideCents * article.packageQuantity),
+                    packagePriceHtCents: Math.round(layer.prixAchatM2OverrideCents * article.packageQuantity * materialCoefficient),
                     purchaseUnit: article.purchaseUnit,
                 });
             }
             needs.push({
                 id: `need:isolation:${key}:layer:${index}`,
-                label: `${article.label} — ${label} — couche ${index + 1}`,
+                label: `${article.label} — ${label} — couche ${index + 1}${layer.semiRigide ? ' — semi-rigide' : ''}`,
                 quantity: (0, money_js_4.roundQuantity)(quantity),
                 unit: 'm2',
-                lossPct: config.insulation.lossPct.value,
+                lossPct,
                 articleCatalogueId: article.id,
                 packageCandidates: candidates,
-                inputRefs: [`${p}.id`, `${p}.articleCatalogueId`, `${p}.epaisseurMm`],
+                inputRefs: [
+                    `${p}.id`,
+                    `${p}.articleCatalogueId`,
+                    `${p}.epaisseurMm`,
+                    `${p}.semiRigide`,
+                    ...(layer.prixAchatM2OverrideCents !== undefined ? [`${p}.prixAchatM2OverrideCents`] : []),
+                ],
                 energyEligible: true,
                 metadata: {
                     thicknessMm: layer.epaisseurMm,
                     baseSurfaceM2: surfaceM2,
+                    lossPct,
+                    insulationKind: isBlown ? 'blown' : 'panel_roll',
+                    semiRigid: layer.semiRigide === true,
+                    materialCoefficient,
+                    ...(typeof article.metadata?.usage === 'string' ? { usage: article.metadata.usage } : {}),
+                    ...(typeof article.metadata?.rApprox === 'number' ? { rApprox: article.metadata.rApprox } : {}),
                 },
             });
         });
         if (isolation.couches.length === 2) {
+            const crossedCoefficient = isolation.poseCroisee
+                ? config.insulation.crossedInstallationLaborCoefficient.value
+                : 1;
             directSales.push({
                 id: `sale:isolation-second-layer:${key}`,
-                label: `Plus-value pose isolation deux couches — ${label}`,
+                label: `Plus-value pose isolation deux couches${isolation.poseCroisee ? ' croisées' : ''} — ${label}`,
                 quantity: surfaceM2,
                 unit: 'm2',
-                unitSaleHtCents: config.insulation.secondLayerLaborSaleCentsPerM2.value,
+                unitSaleHtCents: Math.round(config.insulation.secondLayerLaborSaleCentsPerM2.value * crossedCoefficient),
                 source: 'direct_price',
-                inputRefs: isolation.couches.map((_, index) => `${path}.couches[${index}].articleCatalogueId`),
+                inputRefs: [
+                    ...isolation.couches.map((_, index) => `${path}.couches[${index}].articleCatalogueId`),
+                    `${path}.poseCroisee`,
+                ],
                 energyEligible: true,
             });
         }
@@ -1674,7 +1926,7 @@ define("core/engines/isolationEngine", ["require", "exports", "core/catalogueUti
                 label: `Pare-vapeur — ${label}`,
                 quantity: surfaceM2,
                 unit: 'm2',
-                unitSaleHtCents: config.insulation.membraneSaleCentsPerM2.value,
+                unitSaleHtCents: config.insulation.pareVapeurSaleCentsPerM2.value,
                 source: 'direct_price',
                 inputRefs: [`${path}.pareVapeur`],
                 energyEligible: true,
@@ -1683,24 +1935,36 @@ define("core/engines/isolationEngine", ["require", "exports", "core/catalogueUti
         if (allowValidatedMembranes && isolation.freinVapeur) {
             directSales.push({
                 id: `sale:frein-vapeur:${key}`,
-                label: `Frein-vapeur — ${label}`,
+                label: `Membrane hygrovariable / frein-vapeur — ${label}`,
                 quantity: surfaceM2,
                 unit: 'm2',
-                unitSaleHtCents: config.insulation.membraneSaleCentsPerM2.value,
+                unitSaleHtCents: config.insulation.freinVapeurSaleCentsPerM2.value,
                 source: 'direct_price',
                 inputRefs: [`${path}.freinVapeur`],
                 energyEligible: true,
             });
         }
+        const distinctLosses = [...new Set(layerLosses)];
         ctx.trace({
             engine: 'isolation',
-            inputRefs: [`${path}.active`, ...isolation.couches.map((_, index) => `${path}.couches[${index}].articleCatalogueId`)],
-            formula: 'quantitéCouche = surfaceOuvrage × 1,10',
-            rawResult: surfaceM2 * (1 + config.insulation.lossPct.value / 100),
-            roundedResult: (0, money_js_4.roundQuantity)(surfaceM2 * (1 + config.insulation.lossPct.value / 100)),
+            inputRefs: [
+                `${path}.active`,
+                `${path}.poseCroisee`,
+                ...isolation.couches.flatMap((_, index) => [
+                    `${path}.couches[${index}].articleCatalogueId`,
+                    `${path}.couches[${index}].semiRigide`,
+                ]),
+            ],
+            formula: 'quantitéCouche = surfaceOuvrage × (1 + perteFamille) ; soufflé 3 %, panneaux/rouleaux 10 %',
+            rawResult: surfaceM2,
+            roundedResult: (0, money_js_4.roundQuantity)(surfaceM2),
             unit: 'm2',
             source: 'guillaume_rule',
-            warnings: ['Pour une cloison, la surface d’isolation est comptée une fois dans la cavité, pas une fois par parement.'],
+            warnings: [
+                `Pertes appliquées : ${distinctLosses.join(' / ')} %.`,
+                'Le R de l’abaque est informatif et ne pilote pas automatiquement le choix.',
+                'Pour une cloison, la surface d’isolation est comptée une fois dans la cavité, pas une fois par parement.',
+            ],
         });
     };
 });
@@ -1749,7 +2013,17 @@ define("core/engines/laborEngine", ["require", "exports", "core/modelUtils", "co
                 .filter((face) => face.skins === 2)
                 .reduce((sum, face) => sum + face.netM2, 0);
             const secondSkinHours = secondSkinSurface * config.labor.secondSkinExtraHoursM2.value;
-            const hours = (baseHours + secondSkinHours) * complexity;
+            const hasSemiRigidIsolation = wall.isolation?.active === true && wall.isolation.couches.some((layer) => layer.semiRigide === true);
+            if (wall.isolation?.active) {
+                ctx.fields.consume(`${path}.isolation.poseCroisee`, 'labor');
+                wall.isolation.couches.forEach((_, index) => {
+                    ctx.fields.consume(`${path}.isolation.couches[${index}].semiRigide`, 'labor');
+                });
+            }
+            const semiRigidLaborCoefficient = hasSemiRigidIsolation
+                ? config.insulation.semiRigidLaborCoefficient.value
+                : 1;
+            const hours = (baseHours + secondSkinHours) * complexity * semiRigidLaborCoefficient;
             lines.push({
                 id: `labor:wall:${wall.id}`,
                 label: `Pose ${wall.typeParoi} — ${wall.label}`,
@@ -1784,12 +2058,14 @@ define("core/engines/laborEngine", ["require", "exports", "core/modelUtils", "co
             ctx.trace({
                 engine: 'labor',
                 inputRefs: [`${path}.typeParoi`, `${path}.ossature.montantsDoubles`, 'optionsChantier.complexite'],
-                formula: 'heures = (surfaceOuvrage × tempsBase × coefficientMontantsDoublés + surfaceDoublePeau × 0,05) × coefficientComplexité',
+                formula: 'heures = (surfaceOuvrage × tempsBase × coefficientMontantsDoublés + surfaceDoublePeau × 0,05) × coefficientComplexité × coefficientSemiRigide',
                 rawResult: hours,
                 roundedResult: (0, money_js_5.roundQuantity)(hours),
                 unit: 'h',
                 source: 'guillaume_rule',
-                warnings: [],
+                warnings: hasSemiRigidIsolation
+                    ? ['Coefficient semi-rigide ×1,20 appliqué aux heures de main-d’œuvre de l’ouvrage, conformément à la validation Guillaume.']
+                    : [],
             });
         });
         input.pieces.forEach((piece, pieceIndex) => {
@@ -1804,7 +2080,17 @@ define("core/engines/laborEngine", ["require", "exports", "core/modelUtils", "co
             const secondSkinHours = ceiling.nombrePeaux === 2
                 ? ceilingGeometry.surfaceM2 * config.labor.secondSkinExtraHoursM2.value
                 : 0;
-            const hours = (baseHours + secondSkinHours) * complexity;
+            const hasSemiRigidIsolation = ceiling.isolation?.active === true && ceiling.isolation.couches.some((layer) => layer.semiRigide === true);
+            if (ceiling.isolation?.active) {
+                ctx.fields.consume(`${p}.isolation.poseCroisee`, 'labor');
+                ceiling.isolation.couches.forEach((_, index) => {
+                    ctx.fields.consume(`${p}.isolation.couches[${index}].semiRigide`, 'labor');
+                });
+            }
+            const semiRigidLaborCoefficient = hasSemiRigidIsolation
+                ? config.insulation.semiRigidLaborCoefficient.value
+                : 1;
+            const hours = (baseHours + secondSkinHours) * complexity * semiRigidLaborCoefficient;
             ctx.fields.consume(`${p}.nombrePeaux`, 'labor');
             lines.push({
                 id: `labor:ceiling:${piece.id}`,
@@ -1978,12 +2264,14 @@ define("core/engines/plateEngine", ["require", "exports", "core/errors", "core/m
         const needs = [];
         const horizontalJointMlByFaceKey = {};
         const walls = (0, modelUtils_js_7.getWallsWithPaths)(input);
-        const lossPct = input.overrides.pertePlaquesPct ?? config.plate.lossPct.value;
-        if (input.overrides.pertePlaquesPct !== undefined) {
-            ctx.fields.consume('overrides.pertePlaquesPct', 'plate');
+        const lossPct = input.overrides.pertePlaquesMurPct ??
+            input.overrides.pertePlaquesPct ??
+            config.plate.lossPct.value;
+        if (input.overrides.pertePlaquesMurPct !== undefined) {
+            ctx.fields.consume('overrides.pertePlaquesMurPct', 'plate');
         }
-        if (config.plate.lossPct.status !== 'validated') {
-            ctx.warn((0, errors_js_8.alert)('PLQ-V2-W001', 'Pourcentage de perte plaques non définitivement validé', `La perte plaques utilisée est explicitement de ${lossPct} %.`, 'warning', input.overrides.pertePlaquesPct !== undefined ? ['overrides.pertePlaquesPct'] : []));
+        if (input.overrides.pertePlaquesPct !== undefined) {
+            ctx.fields.consume('overrides.pertePlaquesPct', 'plate', 'Ancien override global appliqué aux murs.');
         }
         walls.forEach(({ wall, path }) => {
             if (!wall.actif)
@@ -2418,7 +2706,7 @@ define("core/calculatePlaquiste", ["require", "exports", "core/context", "core/e
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.calculatePlaquisteV2 = exports.PLAQUISTE_ENGINE_VERSION = void 0;
-    exports.PLAQUISTE_ENGINE_VERSION = 'plaquiste-v2.0.2';
+    exports.PLAQUISTE_ENGINE_VERSION = 'plaquiste-v2.1.0';
     const calculatePlaquisteV2 = async (rawInput, dependencies) => {
         const input = (0, normalize_js_1.normalizePlaquiste)(rawInput);
         const ctx = (0, context_js_1.createCalculationContext)();
@@ -2513,99 +2801,6 @@ define("core/calculatePlaquiste", ["require", "exports", "core/context", "core/e
     const throwIfBlocking = (validation) => {
         if (validation.blocking.length > 0)
             throw new errors_js_9.PlaquisteValidationError(validation);
-    };
-});
-define("core/config", ["require", "exports"], function (require, exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.DEFAULT_PLAQUISTE_CONFIG = void 0;
-    const validated = (value, source, note) => ({
-        value,
-        status: 'validated',
-        source,
-        ...(note ? { note } : {}),
-    });
-    const provisional = (value, source, note) => ({
-        value,
-        status: 'provisional',
-        source,
-        ...(note ? { note } : {}),
-    });
-    const unresolved = (value, source, note) => ({
-        value,
-        status: 'unresolved',
-        source,
-        ...(note ? { note } : {}),
-    });
-    const plateSurcharges = {
-        BA13_STANDARD: validated(0, 'notice-section-9.1'),
-        BA13_HYDRO: validated(85, 'notice-section-9.1', '0,85 €/m² acheté'),
-        BA13_PHONIQUE: validated(135, 'notice-section-9.1', '1,35 €/m² acheté'),
-        BA13_FEU: validated(200, 'notice-section-9.1', '2,00 €/m² acheté'),
-        HABITO: validated(320, 'notice-section-9.1', '3,20 €/m² acheté'),
-        BA10: unresolved(0, 'absence-de-valeur', 'Aucune plus-value validée dans la notice.'),
-        BA15: unresolved(0, 'absence-de-valeur', 'Aucune plus-value validée dans la notice.'),
-        BA18: unresolved(0, 'absence-de-valeur', 'Aucune plus-value validée dans la notice.'),
-        FERMACELL: unresolved(0, 'absence-de-valeur', 'Aucune plus-value validée dans la notice.'),
-    };
-    exports.DEFAULT_PLAQUISTE_CONFIG = {
-        version: 'plaquiste-config-2026-07-31-v1',
-        plate: {
-            widthM: validated(1.2, 'notice-section-9'),
-            lossPct: unresolved(0, 'notice-section-9.2', 'Valeur visible et paramétrable, non validée définitivement.'),
-            surchargePurchaseCentsPerM2: plateSurcharges,
-        },
-        frame: {
-            lossPct: validated(5, 'notice-section-10'),
-        },
-        insulation: {
-            lossPct: validated(10, 'notice-section-12'),
-            secondLayerLaborSaleCentsPerM2: validated(300, 'notice-section-12'),
-            membraneSaleCentsPerM2: validated(700, 'notice-section-12'),
-        },
-        finish: {
-            wallBandMlM2: validated(1.8, 'notice-section-13'),
-            ceilingBandMlM2: validated(2.2, 'notice-section-11.1'),
-            wallCompoundKgM2: validated(0.5, 'notice-section-13'),
-            ceilingCompoundKgM2: validated(0.6, 'notice-section-11.1'),
-            firstLayerScrewsWallUnitM2: provisional(25, 'notice-section-13', 'Valeur V1 explicitement laissée configurable.'),
-            screwLossPct: validated(10, 'audit-guillaume-plaquiste', 'Ajouter 10 % avant conversion en boîtes.'),
-            secondLayerScrewsUnitM2: validated(20, 'notice-section-13'),
-            firstLayerScrewsCeilingUnitM2: validated(18, 'notice-section-11.1'),
-            finishSaleCentsPerM2: {
-                aucune: validated(0, 'notice-section-13.1'),
-                bandes: validated(500, 'notice-section-13.1'),
-                pret_a_peindre: validated(900, 'notice-section-13.1'),
-                soignee: validated(1300, 'notice-section-13.1'),
-            },
-            impressionSaleCentsPerM2: validated(500, 'notice-section-13.1'),
-        },
-        labor: {
-            cloisonSimpleHoursM2: validated(0.35, 'notice-section-14'),
-            doublageOptimaHoursM2: validated(0.4, 'notice-section-14'),
-            doublageClassiqueSansIsolantHoursM2: validated(0.26, 'notice-section-14'),
-            doublageClassiqueAvecIsolantHoursM2: validated(0.32, 'notice-section-14'),
-            plafondDroitHoursM2: validated(0.4, 'notice-section-14'),
-            secondSkinExtraHoursM2: validated(0.05, 'notice-section-14'),
-            doubledStudLaborCoefficient: validated(1.5, 'audit-guillaume-plaquiste', 'Montants doublés : main-d’œuvre ×1,5.'),
-            complexityCoefficient: {
-                simple: validated(0.9, 'notice-section-14'),
-                moyenne: validated(1, 'notice-section-14'),
-                complexe: validated(1.3, 'notice-section-14'),
-            },
-        },
-        directPrices: {
-            renfortOsbCentsPerUnit: validated(7500, 'notice-section-10.3'),
-            angleSortantCentsPerMl: validated(700, 'notice-section-15'),
-            repriseExistantCents: validated(15000, 'notice-section-15'),
-            repriseExistantScope: unresolved('chantier', 'notice-section-15', 'Portée exacte non fermée ; paramétrable.'),
-            accesDifficileCents: validated(45000, 'notice-section-15'),
-            heightThresholdM: validated(3.5, 'notice-section-15'),
-            heightSurchargeCentsPerM2: validated(400, 'notice-section-15'),
-            manyCutsCentsPerM2: validated(200, 'notice-section-15'),
-            rampantSimpleCentsPerM2: validated(500, 'notice-section-11.2'),
-            rampantComplexeCentsPerM2: validated(1100, 'notice-section-11.2'),
-        },
     };
 });
 define("core/index", ["require", "exports", "core/types", "core/config", "core/errors", "core/calculatePlaquiste", "core/engines/orderEngine"], function (require, exports, types_js_1, config_js_1, errors_js_10, calculatePlaquiste_js_1, orderEngine_js_2) {
@@ -3078,6 +3273,7 @@ define("connectors/mocks/mockCatalogue", ["require", "exports"], function (requi
             packageQuantity: 3,
             purchasePriceHtCents: 460,
             lengthM: 3,
+            metadata: { optimaKind: 'furring', usage: 'optima' },
         },
         {
             id: 'furring-f530-530',
@@ -3089,6 +3285,7 @@ define("connectors/mocks/mockCatalogue", ["require", "exports"], function (requi
             packageQuantity: 5.3,
             purchasePriceHtCents: 820,
             lengthM: 5.3,
+            metadata: { optimaKind: 'furring', usage: 'optima' },
         },
         {
             id: 'angle-cr2-300',
@@ -3100,6 +3297,26 @@ define("connectors/mocks/mockCatalogue", ["require", "exports"], function (requi
             packageQuantity: 3,
             purchasePriceHtCents: 230,
             lengthM: 3,
+        },
+        {
+            id: 'optima-clip-track-235', stableCode: 'OPTIMA-LISSE-CLIP-235', label: 'Lisse Clip Optima — 2,35 m',
+            family: 'optima', technicalUnit: 'ml', purchaseUnit: 'bar', packageQuantity: 2.35,
+            purchasePriceHtCents: 280, lengthM: 2.35, metadata: { optimaKind: 'clip_track', usage: 'optima' },
+        },
+        {
+            id: 'optima-support', stableCode: 'OPTIMA-APPUI', label: 'Appui Optima — prix catalogue requis',
+            family: 'optima', technicalUnit: 'unit', purchaseUnit: 'unit', packageQuantity: 1,
+            metadata: { optimaKind: 'support', usage: 'optima' },
+        },
+        {
+            id: 'optima-key', stableCode: 'OPTIMA-CLE', label: 'Clé Optima — prix catalogue requis',
+            family: 'optima', technicalUnit: 'unit', purchaseUnit: 'unit', packageQuantity: 1,
+            metadata: { optimaKind: 'key', usage: 'optima' },
+        },
+        {
+            id: 'optima-fixing', stableCode: 'OPTIMA-FIXATION', label: 'Fixation appui Optima — prix catalogue requis',
+            family: 'optima', technicalUnit: 'unit', purchaseUnit: 'unit', packageQuantity: 1,
+            metadata: { optimaKind: 'fixing', usage: 'optima' },
         },
         hanger('hanger-90', 'Suspente courte 90 mm', 45, false),
         hanger('hanger-120', 'Suspente 120 mm', 55, true),
@@ -3128,10 +3345,53 @@ define("connectors/mocks/mockCatalogue", ["require", "exports"], function (requi
             purchasePriceHtCents: 580,
             metadata: { usage: 'ceiling' },
         },
+        insulation('ldv-45', 'Laine de verre 45 mm', 'Minéral', 'Laine de verre', 45, 328, 'Cloison', 'panel_roll', undefined),
+        insulation('ldr-45', 'Laine de roche 45 mm', 'Minéral', 'Laine de roche', 45, 492, 'Cloison coupe-feu/phonique', 'panel_roll', undefined),
+        insulation('fdb-45', 'Fibre de bois 45 mm', 'Naturel', 'Fibre de bois', 45, 656, 'Cloison', 'panel_roll', undefined),
+        insulation('ldv-70', 'Laine de verre 70 mm', 'Minéral', 'Laine de verre', 70, 410, 'Doublage', 'panel_roll', undefined),
+        insulation('ldr-70', 'Laine de roche 70 mm', 'Minéral', 'Laine de roche', 70, 574, 'Doublage', 'panel_roll', undefined),
+        insulation('fdb-70', 'Fibre de bois 70 mm', 'Naturel', 'Fibre de bois', 70, 820, 'Doublage', 'panel_roll', undefined),
+        insulation('ldv-90', 'Laine de verre 90 mm', 'Minéral', 'Laine de verre', 90, 492, 'Cloison R90', 'panel_roll', undefined),
+        insulation('ldr-90', 'Laine de roche 90 mm', 'Minéral', 'Laine de roche', 90, 656, 'Phonique', 'panel_roll', undefined),
+        insulation('fdb-90', 'Fibre de bois 90 mm', 'Naturel', 'Fibre de bois', 90, 984, 'Phonique', 'panel_roll', undefined),
+        insulation('ldv-100', 'Laine de verre 100 mm', 'Minéral', 'Laine de verre', 100, 574, 'ITI', 'panel_roll', undefined),
+        insulation('ldr-100', 'Laine de roche 100 mm', 'Minéral', 'Laine de roche', 100, 738, 'ITI', 'panel_roll', undefined),
+        insulation('fdb-100', 'Fibre de bois 100 mm', 'Naturel', 'Fibre de bois', 100, 1148, 'ITI', 'panel_roll', undefined),
+        insulation('ldv-120', 'Laine de verre 120 mm', 'Minéral', 'Laine de verre', 120, 656, 'Combles', 'panel_roll', undefined),
+        insulation('ldr-120', 'Laine de roche 120 mm', 'Minéral', 'Laine de roche', 120, 820, 'Combles', 'panel_roll', undefined),
+        insulation('fdb-120', 'Fibre de bois 120 mm', 'Naturel', 'Fibre de bois', 120, 1312, 'Combles', 'panel_roll', undefined),
+        insulation('ldv-140', 'Laine de verre 140 mm', 'Minéral', 'Laine de verre', 140, 738, 'Combles', 'panel_roll', undefined),
+        insulation('ldr-140', 'Laine de roche 140 mm', 'Minéral', 'Laine de roche', 140, 902, 'Combles', 'panel_roll', undefined),
+        insulation('fdb-140', 'Fibre de bois 140 mm', 'Naturel', 'Fibre de bois', 140, 1476, 'Combles', 'panel_roll', undefined),
+        insulation('ldv-160', 'Laine de verre 160 mm', 'Minéral', 'Laine de verre', 160, 820, 'Combles', 'panel_roll', undefined),
+        insulation('ldr-160', 'Laine de roche 160 mm', 'Minéral', 'Laine de roche', 160, 984, 'Combles', 'panel_roll', undefined),
+        insulation('fdb-160', 'Fibre de bois 160 mm', 'Naturel', 'Fibre de bois', 160, 1640, 'Combles', 'panel_roll', undefined),
+        insulation('pse-blanc-80', 'PSE blanc 80 mm', 'Synthétique', 'PSE blanc', 80, 738, 'ITE', 'panel_roll', undefined),
+        insulation('pse-graphite-100', 'PSE graphité 100 mm', 'Synthétique', 'PSE graphité', 100, 1066, 'ITE', 'panel_roll', undefined),
+        insulation('xps-80', 'XPS 80 mm', 'Synthétique', 'XPS', 80, 1312, 'Soubassement', 'panel_roll', undefined),
+        insulation('pur-pir-80', 'PUR/PIR 80 mm', 'Synthétique', 'PUR/PIR', 80, 1804, 'Toiture terrasse', 'panel_roll', undefined),
+        insulation('ouate-100', 'Ouate de cellulose 100 mm', 'Naturel', 'Ouate cellulose', 100, 902, 'Combles', 'panel_roll', undefined),
+        insulation('chanvre-100', 'Chanvre 100 mm', 'Naturel', 'Chanvre', 100, 1230, 'ITI', 'panel_roll', undefined),
+        insulation('lin-100', 'Lin 100 mm', 'Naturel', 'Lin', 100, 1312, 'ITI', 'panel_roll', undefined),
+        insulation('liege-40', 'Liège expansé 40 mm', 'Naturel', 'Liège expansé', 40, 1968, 'ITE/sol', 'panel_roll', undefined),
+        insulation('combles-souffle-ldv-200', 'Laine de verre soufflée 200 mm', 'Minéral', 'Laine de verre', 200, 800, 'Combles soufflés', 'blown', 5.0),
+        insulation('combles-souffle-ldv-300', 'Laine de verre soufflée 300 mm', 'Minéral', 'Laine de verre', 300, 1100, 'Combles soufflés', 'blown', 7.5),
+        insulation('combles-souffle-ldv-400', 'Laine de verre soufflée 400 mm', 'Minéral', 'Laine de verre', 400, 1400, 'Combles soufflés', 'blown', 10.0),
+        insulation('combles-souffle-ldr-200', 'Laine de roche soufflée 200 mm', 'Minéral', 'Laine de roche', 200, 1000, 'Combles soufflés', 'blown', 5.4),
+        insulation('combles-souffle-ldr-300', 'Laine de roche soufflée 300 mm', 'Minéral', 'Laine de roche', 300, 1300, 'Combles soufflés', 'blown', 8.1),
+        insulation('combles-souffle-ouate-300', 'Ouate de cellulose soufflée 300 mm', 'Naturel', 'Ouate cellulose', 300, 1500, 'Combles soufflés', 'blown', 7.5),
+        insulation('combles-souffle-ouate-400', 'Ouate de cellulose soufflée 400 mm', 'Naturel', 'Ouate cellulose', 400, 1900, 'Combles soufflés', 'blown', 10.0),
+        insulation('combles-rouleau-ldv-200', 'Laine de verre rouleau 200 mm', 'Minéral', 'Laine de verre', 200, 900, 'Combles rouleaux', 'panel_roll', 5.0),
+        insulation('combles-rouleau-ldv-240', 'Laine de verre rouleau 240 mm', 'Minéral', 'Laine de verre', 240, 1100, 'Combles rouleaux', 'panel_roll', 6.0),
+        insulation('combles-rouleau-ldv-300', 'Laine de verre rouleau 300 mm', 'Minéral', 'Laine de verre', 300, 1400, 'Combles rouleaux', 'panel_roll', 7.5),
+        insulation('combles-rouleau-ldr-200', 'Laine de roche rouleau 200 mm', 'Minéral', 'Laine de roche', 200, 1200, 'Combles rouleaux', 'panel_roll', 5.4),
+        insulation('combles-rouleau-ldr-300', 'Laine de roche rouleau 300 mm', 'Minéral', 'Laine de roche', 300, 1600, 'Combles rouleaux', 'panel_roll', 8.1),
+        insulation('combles-rouleau-fdb-200', 'Fibre de bois rouleau 200 mm', 'Naturel', 'Fibre de bois', 200, 2200, 'Combles rouleaux', 'panel_roll', 5.2),
+        insulation('combles-rouleau-fdb-240', 'Fibre de bois rouleau 240 mm', 'Naturel', 'Fibre de bois', 240, 2500, 'Combles rouleaux', 'panel_roll', 6.3),
     ];
     class MockCatalogueConnector {
         async getPlaquisteSnapshot(_companyId) {
-            return { version: 'mock-catalogue-annex-2026-07-31', articles: [...articles] };
+            return { version: 'mock-catalogue-abaque-v2-2026-08-05', articles: [...articles] };
         }
     }
     exports.MockCatalogueConnector = MockCatalogueConnector;
@@ -3177,6 +3437,29 @@ define("connectors/mocks/mockCatalogue", ["require", "exports"], function (requi
             packageQuantity: 1,
             purchasePriceHtCents: priceCents,
             metadata: { defaultForCeiling },
+        };
+    }
+    function insulation(id, label, familyName, insulationType, thicknessMm, purchasePriceHtCents, usage, insulationKind, rApprox) {
+        return {
+            id,
+            stableCode: `ABAQUE-V2-${id.toUpperCase()}`,
+            label,
+            family: 'insulation',
+            technicalUnit: 'm2',
+            purchaseUnit: 'pack',
+            packageQuantity: 1,
+            purchasePriceHtCents,
+            metadata: {
+                source: 'Abaque_isolants_generiques_maison_v2',
+                familyName,
+                insulationType,
+                thicknessMm,
+                usage,
+                insulationKind,
+                ...(rApprox !== undefined ? { rApprox } : {}),
+                artisanEditable: true,
+                priceNature: 'purchase_cost_to_margin',
+            },
         };
     }
 });
@@ -3308,7 +3591,6 @@ define("index", ["require", "exports", "core/index", "connectors/index", "connec
     __exportStar(index_js_3, exports);
     __exportStar(index_js_4, exports);
 });
-
 (function (global) {
   'use strict';
   const runtime = global.__plaquisteAmdLoad('connectors/runtime');
