@@ -1,7 +1,5 @@
 const { PlaquisteModuleRuntime, createMockConnectors } = window;
-if (!PlaquisteModuleRuntime || !createMockConnectors) {
-  throw new Error('Le moteur Plaquiste n\'est pas chargé. Vérifiez engine-bundle.js.');
-}
+if (!PlaquisteModuleRuntime || !createMockConnectors) { throw new Error('Le moteur Plaquiste v2.1.0 n\'est pas chargé. Vérifiez engine-bundle.js.'); }
 
 const runtime = new PlaquisteModuleRuntime(createMockConnectors());
 
@@ -12,7 +10,54 @@ const STEPS = [
   { title: 'Équipements', subtitle: 'Ouvertures et plafond' },
   { title: 'Options', subtitle: 'Prix et complexité' },
   { title: 'Résultat', subtitle: 'Devis et commandes' },
+
 ];
+
+const ABAQUE_ISOLANTS_V2 = [
+  ['ldv-45','Laine de verre 45 mm',45,3.28,'Cloison','panel_roll'],
+  ['ldr-45','Laine de roche 45 mm',45,4.92,'Cloison coupe-feu/phonique','panel_roll'],
+  ['fdb-45','Fibre de bois 45 mm',45,6.56,'Cloison','panel_roll'],
+  ['ldv-70','Laine de verre 70 mm',70,4.10,'Doublage','panel_roll'],
+  ['ldr-70','Laine de roche 70 mm',70,5.74,'Doublage','panel_roll'],
+  ['fdb-70','Fibre de bois 70 mm',70,8.20,'Doublage','panel_roll'],
+  ['ldv-90','Laine de verre 90 mm',90,4.92,'Cloison R90','panel_roll'],
+  ['ldr-90','Laine de roche 90 mm',90,6.56,'Phonique','panel_roll'],
+  ['fdb-90','Fibre de bois 90 mm',90,9.84,'Phonique','panel_roll'],
+  ['ldv-100','Laine de verre 100 mm',100,5.74,'ITI','panel_roll'],
+  ['ldr-100','Laine de roche 100 mm',100,7.38,'ITI','panel_roll'],
+  ['fdb-100','Fibre de bois 100 mm',100,11.48,'ITI','panel_roll'],
+  ['ldv-120','Laine de verre 120 mm',120,6.56,'Combles','panel_roll'],
+  ['ldr-120','Laine de roche 120 mm',120,8.20,'Combles','panel_roll'],
+  ['fdb-120','Fibre de bois 120 mm',120,13.12,'Combles','panel_roll'],
+  ['ldv-140','Laine de verre 140 mm',140,7.38,'Combles','panel_roll'],
+  ['ldr-140','Laine de roche 140 mm',140,9.02,'Combles','panel_roll'],
+  ['fdb-140','Fibre de bois 140 mm',140,14.76,'Combles','panel_roll'],
+  ['ldv-160','Laine de verre 160 mm',160,8.20,'Combles','panel_roll'],
+  ['ldr-160','Laine de roche 160 mm',160,9.84,'Combles','panel_roll'],
+  ['fdb-160','Fibre de bois 160 mm',160,16.40,'Combles','panel_roll'],
+  ['pse-blanc-80','PSE blanc 80 mm',80,7.38,'ITE','panel_roll'],
+  ['pse-graphite-100','PSE graphité 100 mm',100,10.66,'ITE','panel_roll'],
+  ['xps-80','XPS 80 mm',80,13.12,'Soubassement','panel_roll'],
+  ['pur-pir-80','PUR/PIR 80 mm',80,18.04,'Toiture terrasse','panel_roll'],
+  ['ouate-100','Ouate de cellulose 100 mm',100,9.02,'Combles','panel_roll'],
+  ['chanvre-100','Chanvre 100 mm',100,12.30,'ITI','panel_roll'],
+  ['lin-100','Lin 100 mm',100,13.12,'ITI','panel_roll'],
+  ['liege-40','Liège expansé 40 mm',40,19.68,'ITE/sol','panel_roll'],
+  ['combles-souffle-ldv-200','Laine de verre soufflée 200 mm',200,8,'Combles soufflés','blown'],
+  ['combles-souffle-ldv-300','Laine de verre soufflée 300 mm',300,11,'Combles soufflés','blown'],
+  ['combles-souffle-ldv-400','Laine de verre soufflée 400 mm',400,14,'Combles soufflés','blown'],
+  ['combles-souffle-ldr-200','Laine de roche soufflée 200 mm',200,10,'Combles soufflés','blown'],
+  ['combles-souffle-ldr-300','Laine de roche soufflée 300 mm',300,13,'Combles soufflés','blown'],
+  ['combles-souffle-ouate-300','Ouate de cellulose soufflée 300 mm',300,15,'Combles soufflés','blown'],
+  ['combles-souffle-ouate-400','Ouate de cellulose soufflée 400 mm',400,19,'Combles soufflés','blown'],
+  ['combles-rouleau-ldv-200','Laine de verre rouleau 200 mm',200,9,'Combles rouleaux','panel_roll'],
+  ['combles-rouleau-ldv-240','Laine de verre rouleau 240 mm',240,11,'Combles rouleaux','panel_roll'],
+  ['combles-rouleau-ldv-300','Laine de verre rouleau 300 mm',300,14,'Combles rouleaux','panel_roll'],
+  ['combles-rouleau-ldr-200','Laine de roche rouleau 200 mm',200,12,'Combles rouleaux','panel_roll'],
+  ['combles-rouleau-ldr-300','Laine de roche rouleau 300 mm',300,16,'Combles rouleaux','panel_roll'],
+  ['combles-rouleau-fdb-200','Fibre de bois rouleau 200 mm',200,22,'Combles rouleaux','panel_roll'],
+  ['combles-rouleau-fdb-240','Fibre de bois rouleau 240 mm',240,25,'Combles rouleaux','panel_roll'],
+].map(([id,label,thicknessMm,priceEuroM2,usage,kind]) => ({ id,label,thicknessMm,priceEuroM2,usage,kind }));
 
 const state = {
   step: 0,
@@ -36,6 +81,15 @@ const nextBtn = document.querySelector('#nextBtn');
 const saveDraftBtn = document.querySelector('#saveDraftBtn');
 const calculateTopBtn = document.querySelector('#calculateTopBtn');
 const calculateSideBtn = document.querySelector('#calculateSideBtn');
+
+stepContent.addEventListener('click', handlePlanWallActivation);
+stepContent.addEventListener('keydown', (event) => {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  const target = event.target.closest?.('[data-plan-wall]');
+  if (!target) return;
+  event.preventDefault();
+  activatePlanWall(target);
+});
 
 render();
 
@@ -220,23 +274,207 @@ function renderWorksStep() {
 
 function renderPieceCard(piece, pieceIndex) {
   return `
-    <div class="wall-card" data-piece-card="${piece.id}">
+    <div class="wall-card piece-card" data-piece-card="${piece.id}">
       <div class="wall-card-head">
         <div><strong>${escapeHtml(piece.nom)}</strong><span class="field-tag">PLQ.PIECE.${pieceIndex + 1}</span></div>
         <div class="inline-actions">
-          <button class="btn btn-small btn-ghost" data-select-piece="${piece.id}" type="button">Configurer</button>
+          <button class="btn btn-small btn-ghost" data-select-piece="${piece.id}" type="button">Configurer les murs</button>
           <button class="btn btn-small btn-danger" data-remove-piece="${piece.id}" type="button">Supprimer</button>
         </div>
       </div>
-      <div class="form-grid">
-        ${textField('Nom', `piece-name-${piece.id}`, piece.nom, '', `PLQ.PIECE.${pieceIndex + 1}.NOM`, 'span-3')}
-        ${numberField('Longueur', `piece-length-${piece.id}`, piece.longueurM, 'm', `PLQ.PIECE.${pieceIndex + 1}.LONGUEUR`, 'span-3', 0.01)}
-        ${numberField('Largeur', `piece-width-${piece.id}`, piece.largeurM, 'm', `PLQ.PIECE.${pieceIndex + 1}.LARGEUR`, 'span-3', 0.01)}
-        ${numberField('Hauteur', `piece-height-${piece.id}`, piece.hauteurM, 'm', `PLQ.PIECE.${pieceIndex + 1}.HAUTEUR`, 'span-3', 0.01)}
+      <div class="piece-card-layout">
+        <div class="piece-plan-column">
+          <div class="piece-plan-host" data-piece-plan-host="${piece.id}" data-plan-target-step="2" data-plan-compact="true">
+            ${renderPiecePlan(piece, { targetStep: 2, compact: true })}
+          </div>
+          ${renderPlanLegend(true)}
+        </div>
+        <div class="piece-fields-column">
+          <div class="form-grid">
+            ${textField('Nom', `piece-name-${piece.id}`, piece.nom, '', `PLQ.PIECE.${pieceIndex + 1}.NOM`, 'full')}
+            ${numberField('Longueur', `piece-length-${piece.id}`, piece.longueurM, 'm', `PLQ.PIECE.${pieceIndex + 1}.LONGUEUR`, 'span-4', 0.01)}
+            ${numberField('Largeur', `piece-width-${piece.id}`, piece.largeurM, 'm', `PLQ.PIECE.${pieceIndex + 1}.LARGEUR`, 'span-4', 0.01)}
+            ${numberField('Hauteur', `piece-height-${piece.id}`, piece.hauteurM, 'm', `PLQ.PIECE.${pieceIndex + 1}.HAUTEUR`, 'span-4', 0.01)}
+          </div>
+          <div class="piece-live-status" data-piece-status="${piece.id}">${renderPieceStatus(piece)}</div>
+          <p class="plan-help">Cliquez directement sur un mur A, B, C ou D pour ouvrir sa configuration.</p>
+        </div>
       </div>
-      <div class="field-help">${piece.murs.filter((wall) => wall.actif).length} mur(s) actif(s) sur 4 · plafond ${piece.plafond?.actif ? 'activé' : 'désactivé'}</div>
     </div>
   `;
+}
+
+
+function renderPieceStatus(piece) {
+  const activeWalls = piece.murs.filter((wall) => wall.actif).length;
+  const openingCount = piece.murs.reduce((sum, wall) => sum + wall.ouvertures.reduce((subtotal, opening) => subtotal + Math.max(0, Number(opening.quantite) || 0), 0), 0);
+  return `<strong>${activeWalls} mur(s) actif(s) sur 4</strong><span>${openingCount} ouverture(s) · plafond ${piece.plafond?.actif ? 'activé' : 'désactivé'}</span>`;
+}
+
+function renderPiecePlanPanel(piece, targetStep = state.step, title = 'Plan 2D de la pièce') {
+  return `
+    <div class="card plan-focus-card">
+      <div class="card-header">
+        <div><h2>${escapeHtml(title)}</h2><p>${escapeHtml(piece.nom)} · vue du dessus, à l’échelle automatique. Les murs sont directement cliquables.</p></div>
+        <span class="plan-surface-chip">${formatPlanDimension(piece.longueurM * piece.largeurM)} m² au sol</span>
+      </div>
+      <div class="piece-plan-host plan-focus-host" data-piece-plan-host="${piece.id}" data-plan-target-step="${targetStep}" data-plan-compact="false">
+        ${renderPiecePlan(piece, { targetStep, compact: false })}
+      </div>
+      ${renderPlanLegend(false)}
+    </div>
+  `;
+}
+
+function renderPiecePlan(piece, { targetStep = state.step, compact = false } = {}) {
+  const viewWidth = 640;
+  const viewHeight = compact ? 360 : 410;
+  const length = Math.max(0.1, Number(piece.longueurM) || 0.1);
+  const width = Math.max(0.1, Number(piece.largeurM) || 0.1);
+  const availableWidth = compact ? 430 : 470;
+  const availableHeight = compact ? 190 : 235;
+  const scale = Math.min(availableWidth / length, availableHeight / width);
+  const roomWidth = Math.max(48, length * scale);
+  const roomHeight = Math.max(38, width * scale);
+  const roomX = (viewWidth - roomWidth) / 2;
+  const roomY = (viewHeight - roomHeight) / 2 + 8;
+  const walls = [
+    { wall: piece.murs[0], letter: 'A', side: 'top', x1: roomX, y1: roomY, x2: roomX + roomWidth, y2: roomY, labelX: roomX + roomWidth / 2, labelY: roomY - 20 },
+    { wall: piece.murs[1], letter: 'B', side: 'right', x1: roomX + roomWidth, y1: roomY, x2: roomX + roomWidth, y2: roomY + roomHeight, labelX: roomX + roomWidth + 24, labelY: roomY + roomHeight / 2 },
+    { wall: piece.murs[2], letter: 'C', side: 'bottom', x1: roomX + roomWidth, y1: roomY + roomHeight, x2: roomX, y2: roomY + roomHeight, labelX: roomX + roomWidth / 2, labelY: roomY + roomHeight + 29 },
+    { wall: piece.murs[3], letter: 'D', side: 'left', x1: roomX, y1: roomY + roomHeight, x2: roomX, y2: roomY, labelX: roomX - 24, labelY: roomY + roomHeight / 2 },
+  ].filter((item) => item.wall);
+  const ceilingClass = piece.plafond?.actif ? 'ceiling-active' : 'ceiling-inactive';
+  const ratioWarning = length / width > 8 || width / length > 8;
+
+  return `
+    <div class="plan2d-wrap ${compact ? 'compact' : ''}">
+      <svg class="plan2d-svg" viewBox="0 0 ${viewWidth} ${viewHeight}" role="img" aria-label="Plan 2D interactif de ${escapeAttribute(piece.nom)}">
+        <rect class="plan2d-canvas" x="1" y="1" width="${viewWidth - 2}" height="${viewHeight - 2}" rx="18" />
+        <g class="plan-dimension plan-dimension-horizontal">
+          <line x1="${roomX}" y1="${roomY - 48}" x2="${roomX + roomWidth}" y2="${roomY - 48}" />
+          <line x1="${roomX}" y1="${roomY - 55}" x2="${roomX}" y2="${roomY - 41}" />
+          <line x1="${roomX + roomWidth}" y1="${roomY - 55}" x2="${roomX + roomWidth}" y2="${roomY - 41}" />
+          <text x="${roomX + roomWidth / 2}" y="${roomY - 57}">${formatPlanDimension(length)} m</text>
+        </g>
+        <g class="plan-dimension plan-dimension-vertical">
+          <line x1="${roomX - 50}" y1="${roomY}" x2="${roomX - 50}" y2="${roomY + roomHeight}" />
+          <line x1="${roomX - 57}" y1="${roomY}" x2="${roomX - 43}" y2="${roomY}" />
+          <line x1="${roomX - 57}" y1="${roomY + roomHeight}" x2="${roomX - 43}" y2="${roomY + roomHeight}" />
+          <text transform="translate(${roomX - 61} ${roomY + roomHeight / 2}) rotate(-90)">${formatPlanDimension(width)} m</text>
+        </g>
+        <rect class="plan-room-floor ${ceilingClass}" x="${roomX}" y="${roomY}" width="${roomWidth}" height="${roomHeight}" />
+        <g class="plan-room-caption">
+          <text class="plan-room-name" x="${roomX + roomWidth / 2}" y="${roomY + roomHeight / 2 - 7}">${escapeHtml(piece.nom)}</text>
+          <text class="plan-room-meta" x="${roomX + roomWidth / 2}" y="${roomY + roomHeight / 2 + 14}">${formatPlanDimension(length)} × ${formatPlanDimension(width)} m · H ${formatPlanDimension(piece.hauteurM)} m</text>
+          <text class="plan-room-ceiling" x="${roomX + roomWidth / 2}" y="${roomY + roomHeight / 2 + 34}">Plafond ${piece.plafond?.actif ? 'actif' : 'inactif'}</text>
+        </g>
+        ${walls.map((item) => renderPlanWall(piece, item, targetStep)).join('')}
+        ${ratioWarning ? `<g class="plan-ratio-warning"><rect x="${viewWidth - 182}" y="18" width="164" height="28" rx="14"/><text x="${viewWidth - 100}" y="36">Pièce très allongée</text></g>` : ''}
+      </svg>
+      <div class="plan-mobile-wall-list">
+        ${walls.map(({ wall, letter }) => `<button class="plan-mobile-wall ${wall.id === state.selectedWallId ? 'selected' : ''} ${wall.actif ? '' : 'inactive'}" data-plan-wall="${wall.id}" data-plan-piece="${piece.id}" data-plan-target-step="${targetStep}" type="button"><strong>Mur ${letter}</strong><span>${formatPlanDimension(wall.longueurM)} m · ${wall.actif ? 'actif' : 'inactif'}</span></button>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderPlanWall(piece, item, targetStep) {
+  const { wall, letter, side, x1, y1, x2, y2, labelX, labelY } = item;
+  const selected = wall.id === state.selectedWallId;
+  const classes = [wall.actif ? 'active' : 'inactive', selected ? 'selected' : '', `side-${side}`].filter(Boolean).join(' ');
+  const openingMarkers = renderPlanOpenings(wall, x1, y1, x2, y2);
+  return `
+    <g class="plan-wall-group ${classes}" data-plan-wall="${wall.id}" data-plan-piece="${piece.id}" data-plan-target-step="${targetStep}" role="button" tabindex="0" aria-pressed="${selected}" aria-label="Configurer le mur ${letter}, ${formatPlanDimension(wall.longueurM)} mètres, ${wall.actif ? 'actif' : 'inactif'}">
+      <line class="plan-wall-hit" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" />
+      <line class="plan-wall-line" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" />
+      ${openingMarkers}
+      <g class="plan-wall-badge" transform="translate(${labelX} ${labelY})">
+        <circle r="15" />
+        <text y="4">${letter}</text>
+      </g>
+    </g>
+  `;
+}
+
+function renderPlanOpenings(wall, x1, y1, x2, y2) {
+  const units = [];
+  wall.ouvertures.forEach((opening) => {
+    const quantity = Math.min(8, Math.max(0, Number(opening.quantite) || 0));
+    for (let index = 0; index < quantity; index += 1) units.push(opening);
+  });
+  if (!units.length) return '';
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lineLength = Math.hypot(dx, dy);
+  if (!lineLength) return '';
+  const ux = dx / lineLength;
+  const uy = dy / lineLength;
+  return units.slice(0, 12).map((opening, index, array) => {
+    const center = lineLength * ((index + 1) / (array.length + 1));
+    const proportionalWidth = (Math.max(0.2, Number(opening.largeurM) || 0.2) / Math.max(0.2, Number(wall.longueurM) || 0.2)) * lineLength;
+    const markerWidth = Math.min(lineLength * 0.28, Math.max(12, proportionalWidth));
+    const centerX = x1 + ux * center;
+    const centerY = y1 + uy * center;
+    const startX = centerX - ux * markerWidth / 2;
+    const startY = centerY - uy * markerWidth / 2;
+    const endX = centerX + ux * markerWidth / 2;
+    const endY = centerY + uy * markerWidth / 2;
+    return `<g class="plan-opening ${escapeAttribute(opening.type)}" aria-hidden="true"><line class="plan-opening-gap" x1="${startX}" y1="${startY}" x2="${endX}" y2="${endY}"/><line class="plan-opening-mark" x1="${startX}" y1="${startY}" x2="${endX}" y2="${endY}"/></g>`;
+  }).join('');
+}
+
+function renderPlanLegend(compact) {
+  return `<div class="plan-legend ${compact ? 'compact' : ''}">
+    <span><i class="legend-line active"></i>Mur actif</span>
+    <span><i class="legend-line selected"></i>Mur sélectionné</span>
+    <span><i class="legend-line inactive"></i>Mur inactif</span>
+    <span><i class="legend-opening"></i>Ouverture</span>
+    ${compact ? '' : '<small>La position des ouvertures est indicative : le moteur utilise uniquement le mur, les dimensions et la quantité saisies.</small>'}
+  </div>`;
+}
+
+function activatePlanWall(target) {
+  state.selectedWallId = target.dataset.planWall;
+  state.selectedPieceId = target.dataset.planPiece;
+  const requestedStep = Number(target.dataset.planTargetStep);
+  if (Number.isInteger(requestedStep) && requestedStep !== state.step) goToStep(requestedStep);
+  else renderStep();
+}
+
+function handlePlanWallActivation(event) {
+  const target = event.target.closest?.('[data-plan-wall]');
+  if (!target) return;
+  activatePlanWall(target);
+}
+
+function getPieceForWall(wall) {
+  if (!wall || wall.source !== 'piece') return null;
+  return state.input.pieces.find((piece) => piece.id === wall.pieceId || piece.murs.some((item) => item.id === wall.id)) ?? null;
+}
+
+function refreshPlanForWall(wall) {
+  const piece = getPieceForWall(wall);
+  if (piece) refreshPiecePlan(piece.id);
+}
+
+function refreshPiecePlan(pieceId) {
+  const piece = state.input.pieces.find((item) => item.id === pieceId);
+  if (!piece) return;
+  document.querySelectorAll('[data-piece-plan-host]').forEach((host) => {
+    if (host.dataset.piecePlanHost !== pieceId) return;
+    host.innerHTML = renderPiecePlan(piece, {
+      targetStep: Number(host.dataset.planTargetStep || state.step),
+      compact: host.dataset.planCompact === 'true',
+    });
+  });
+  document.querySelectorAll('[data-piece-status]').forEach((status) => {
+    if (status.dataset.pieceStatus === pieceId) status.innerHTML = renderPieceStatus(piece);
+  });
+}
+
+function formatPlanDimension(value) {
+  return Number(value || 0).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
 function renderSimpleWallCard(wall, index) {
@@ -261,10 +499,10 @@ function renderSimpleWallCard(wall, index) {
 
 function bindWorksEvents() {
   state.input.pieces.forEach((piece) => {
-    bindInput(`#piece-name-${cssEscape(piece.id)}`, 'input', (value) => { piece.nom = value; touch(); renderProjectInfo(); });
-    bindInput(`#piece-length-${cssEscape(piece.id)}`, 'input', (value) => { piece.longueurM = positiveNumber(value); syncPieceWalls(piece); touch(); });
-    bindInput(`#piece-width-${cssEscape(piece.id)}`, 'input', (value) => { piece.largeurM = positiveNumber(value); syncPieceWalls(piece); touch(); });
-    bindInput(`#piece-height-${cssEscape(piece.id)}`, 'input', (value) => { piece.hauteurM = positiveNumber(value); syncPieceWalls(piece); touch(); });
+    bindInput(`#piece-name-${cssEscape(piece.id)}`, 'input', (value) => { piece.nom = value; refreshPiecePlan(piece.id); touch(); renderProjectInfo(); });
+    bindInput(`#piece-length-${cssEscape(piece.id)}`, 'input', (value) => { piece.longueurM = positiveNumber(value); syncPieceWalls(piece); refreshPiecePlan(piece.id); touch(); });
+    bindInput(`#piece-width-${cssEscape(piece.id)}`, 'input', (value) => { piece.largeurM = positiveNumber(value); syncPieceWalls(piece); refreshPiecePlan(piece.id); touch(); });
+    bindInput(`#piece-height-${cssEscape(piece.id)}`, 'input', (value) => { piece.hauteurM = positiveNumber(value); syncPieceWalls(piece); refreshPiecePlan(piece.id); touch(); });
   });
   state.input.mursSimples.forEach((wall) => {
     bindInput(`#wall-label-${cssEscape(wall.id)}`, 'input', (value) => { wall.label = value; touch(); });
@@ -296,11 +534,12 @@ function bindWorksEvents() {
 function renderWallsStep() {
   ensureSelectedWall();
   const wall = getWall(state.selectedWallId);
+  const piece = wall ? getPieceForWall(wall) : null;
   stepContent.innerHTML = pageHead(
     'Configuration des parois',
     'Plaques, faces et ossature mur par mur',
     'Chaque mur conserve sa nature réelle. Une cloison possède deux faces actives ; un doublage une seule face. Aucun ratio 60/40 n’est utilisé.'
-  ) + wallTabs() + (wall ? renderWallEditor(wall) : emptyState('Aucun mur disponible', 'Retournez à l’étape Ouvrages pour ajouter une pièce ou un mur simple.'));
+  ) + (piece ? renderPiecePlanPanel(piece, 2, 'Sélectionnez un mur sur le plan') : '') + wallTabs() + (wall ? renderWallEditor(wall) : emptyState('Aucun mur disponible', 'Retournez à l’étape Ouvrages pour ajouter une pièce ou un mur simple.'));
 
   bindWallTabs();
   if (wall) bindWallEditor(wall);
@@ -352,7 +591,7 @@ function renderWallEditor(wall) {
           ${labelWithTag('Système', `${ref}.OSSATURE.SYSTEME`)}
           <select class="select" id="frame-system">
             <option value="classique" ${wall.ossature.systeme === 'classique' ? 'selected' : ''}>Classique rails / montants</option>
-            <option value="optima" ${wall.ossature.systeme === 'optima' ? 'selected' : ''}>Optima — validation métier requise</option>
+            <option value="optima" ${wall.ossature.systeme === 'optima' ? 'selected' : ''}>Optima — règles Guillaume validées</option>
           </select>
         </div>
         <div class="field span-4">
@@ -366,9 +605,9 @@ function renderWallEditor(wall) {
         <div class="field full">
           ${switchRow('Montants doublés', 'Le doublement est visible dans le calcul et la trace.', 'frame-doubled', wall.ossature.montantsDoubles, `${ref}.OSSATURE.MONTANTS_DOUBLES`)}
         </div>
-        ${wall.ossature.systeme === 'optima' ? numberField('Nombre d’appuis par m²', 'frame-supports', wall.ossature.nombreAppuisParM2 ?? '', 'u/m²', `${ref}.OSSATURE.APPUIS_M2`, 'full', 0.1) : ''}
+        ${wall.ossature.systeme === 'optima' ? numberField('Nombre de rangées d’appuis', 'frame-supports', wall.ossature.nombreRangeesAppuis ?? Math.max(1, Math.ceil(wall.hauteurM / 1.35)), 'rangée(s)', `${ref}.OSSATURE.RANGEES_APPUIS`, 'full', 1) : ''}
       </div>
-      ${wall.ossature.systeme === 'optima' ? `<div class="alert warning"><div><strong>Règle Optima à valider</strong><p>Le moteur bloquera tant que les règles matérielles détaillées ne seront pas fournies par Guillaume. Rien ne sera inventé.</p></div></div>` : ''}
+      ${wall.ossature.systeme === 'optima' ? `<div class="alert info"><div><strong>Règles Optima intégrées</strong><p>Proposition automatique : 1 rangée tous les 1,35 m. Consommations : F530 1,8 ml/m², lisse 0,9 ml/m², appui 0,75 u/m², clé 0,75 u/m² et 2 fixations/m² par rangée. Les prix réels des appuis, clés et fixations restent requis dans le catalogue.</p></div></div>` : ''}
     </div>
   `;
 }
@@ -414,8 +653,8 @@ function bindWallTabs() {
 }
 
 function bindWallEditor(wall) {
-  bindCheckbox(`#active-wall-editor-${cssEscape(wall.id)}`, (checked) => { wall.actif = checked; touch(); renderProjectInfo(); });
-  bindInput(`#editor-wall-label-${cssEscape(wall.id)}`, 'input', (value) => { wall.label = value; touch(); renderStep(); });
+  bindCheckbox(`#active-wall-editor-${cssEscape(wall.id)}`, (checked) => { wall.actif = checked; refreshPlanForWall(wall); touch(); renderProjectInfo(); });
+  bindInput(`#editor-wall-label-${cssEscape(wall.id)}`, 'input', (value) => { wall.label = value; refreshPlanForWall(wall); touch(); renderStep(); });
   bindInput(`#editor-wall-length-${cssEscape(wall.id)}`, 'input', (value) => { wall.longueurM = positiveNumber(value); touch(); });
   bindInput(`#editor-wall-height-${cssEscape(wall.id)}`, 'input', (value) => { wall.hauteurM = positiveNumber(value); touch(); });
   bindInput(`#editor-wall-angles-${cssEscape(wall.id)}`, 'input', (value) => { wall.nombreAnglesSortants = positiveInteger(value); touch(); });
@@ -444,19 +683,21 @@ function bindWallEditor(wall) {
   });
   bindInput('#frame-system', 'change', (value) => {
     wall.ossature.systeme = value;
-    if (value === 'classique') delete wall.ossature.nombreAppuisParM2;
+    if (value === 'classique') { delete wall.ossature.nombreRangeesAppuis; delete wall.ossature.nombreAppuisParM2; } else { wall.ossature.nombreRangeesAppuis = Math.max(1, Math.ceil(wall.hauteurM / 1.35)); }
     renderStep(); touch();
   });
   bindInput('#frame-width', 'change', (value) => { wall.ossature.largeurProfilMm = Number(value); touch(); });
   bindInput('#frame-spacing', 'change', (value) => { wall.ossature.entraxeMm = Number(value); touch(); });
   bindCheckbox('#frame-doubled', (checked) => { wall.ossature.montantsDoubles = checked; touch(); });
-  bindInput('#frame-supports', 'input', (value) => { wall.ossature.nombreAppuisParM2 = positiveNumber(value); touch(); });
+  bindInput('#frame-supports', 'input', (value) => { wall.ossature.nombreRangeesAppuis = positiveInteger(value); touch(); });
 }
 
 function renderEquipmentStep() {
   ensureSelectedWall();
   ensureSelectedPiece();
   const wall = getWall(state.selectedWallId);
+  const wallPiece = wall ? getPieceForWall(wall) : null;
+  if (wallPiece) state.selectedPieceId = wallPiece.id;
   const piece = state.input.pieces.find((item) => item.id === state.selectedPieceId);
 
   stepContent.innerHTML = pageHead(
@@ -464,6 +705,7 @@ function renderEquipmentStep() {
     'Ouvertures, isolation, renforts et plafonds',
     'Les ouvertures sont rattachées à un mur unique. L’isolation est calculée sur l’ouvrage concerné et le plafond reste lié à sa pièce.'
   ) + `
+    ${wallPiece ? renderPiecePlanPanel(wallPiece, 3, 'Ouvertures et mur sélectionné') : ''}
     ${wallTabs()}
     ${wall ? renderOpeningsIsolation(wall) : emptyState('Aucun mur disponible', 'Ajoutez un ouvrage pour configurer les ouvertures et l’isolation.')}
     ${renderCeilingSection(piece)}
@@ -476,6 +718,8 @@ function renderEquipmentStep() {
 
 function renderOpeningsIsolation(wall) {
   const ref = wallReference(wall);
+  const isolation = wall.isolation;
+  const thicknessWarning = isolation?.active && isolation.couches.some((layer) => Number(layer.epaisseurMm) > Number(wall.ossature.largeurProfilMm));
   return `
     <div class="card">
       <div class="card-header">
@@ -488,31 +732,21 @@ function renderOpeningsIsolation(wall) {
     </div>
 
     <div class="card">
-      <div class="card-header"><div><h2>Isolation</h2><p>Les deux couches sont commandées séparément. Les membranes créent des lignes de vente distinctes.</p></div></div>
-      ${switchRow('Activer l’isolation', 'Surface calculée une seule fois dans la cavité du mur.', 'isolation-active', wall.isolation?.active ?? false, `${ref}.ISOLATION.ACTIVE`)}
-      ${wall.isolation?.active ? `
+      <div class="card-header"><div><h2>Isolation — abaque Guillaume v2</h2><p>Les prix sont des coûts d’achat HT/m² à marger et restent modifiables. Pertes : 10 % panneaux/rouleaux, 3 % soufflé.</p></div></div>
+      ${switchRow('Activer l’isolation', 'Suggestion selon l’usage et l’épaisseur du profil, avec choix manuel possible.', 'isolation-active', isolation?.active ?? false, `${ref}.ISOLATION.ACTIVE`)}
+      ${isolation?.active ? `
         <div class="form-grid" style="margin-top:16px">
-          <div class="field span-4">
-            ${labelWithTag('Article couche 1', `${ref}.ISOLATION.COUCHE_1.ARTICLE`)}
-            <select class="select" id="isolation-layer-1">${isolationOptions(wall.isolation.couches[0]?.articleCatalogueId)}</select>
-          </div>
-          ${numberField('Épaisseur couche 1', 'isolation-thickness-1', wall.isolation.couches[0]?.epaisseurMm ?? 100, 'mm', `${ref}.ISOLATION.COUCHE_1.EPAISSEUR`, 'span-4', 1)}
+          ${renderIsolationLayer(isolation.couches[0], 1, ref)}
           <div class="field span-4">
             ${labelWithTag('Nombre de couches', `${ref}.ISOLATION.NB_COUCHES`)}
-            <div class="segmented" id="isolation-layers-count">${segmentButton('1 couche','1',String(wall.isolation.couches.length))}${segmentButton('2 couches','2',String(wall.isolation.couches.length))}</div>
+            <div class="segmented" id="isolation-layers-count">${segmentButton('1 couche','1',String(isolation.couches.length))}${segmentButton('2 couches','2',String(isolation.couches.length))}</div>
           </div>
-          ${wall.isolation.couches.length === 2 ? `
-            <div class="field span-4">
-              ${labelWithTag('Article couche 2', `${ref}.ISOLATION.COUCHE_2.ARTICLE`)}
-              <select class="select" id="isolation-layer-2">${isolationOptions(wall.isolation.couches[1]?.articleCatalogueId)}</select>
-            </div>
-            ${numberField('Épaisseur couche 2', 'isolation-thickness-2', wall.isolation.couches[1]?.epaisseurMm ?? 45, 'mm', `${ref}.ISOLATION.COUCHE_2.EPAISSEUR`, 'span-4', 1)}
-          ` : ''}
+          ${isolation.couches.length === 2 ? `${renderIsolationLayer(isolation.couches[1], 2, ref)}<div class="field full">${switchRow('Pose croisée', 'Coefficient ×1,15 sur la main-d’œuvre de la seconde couche uniquement.', 'isolation-crossed', isolation.poseCroisee === true, `${ref}.ISOLATION.POSE_CROISEE`)}</div>` : ''}
           <div class="field full">
-            ${switchRow('Pare-vapeur', wall.typeParoi === 'doublage' ? 'Ligne distincte à 7 €/m² dans la configuration validée.' : 'Règle non validée pour une cloison : calcul automatique bloqué.', 'isolation-vapor', wall.isolation.pareVapeur, `${ref}.ISOLATION.PARE_VAPEUR`, wall.typeParoi !== 'doublage')}
-            ${switchRow('Frein-vapeur', wall.typeParoi === 'doublage' ? 'Option indépendante et cumulable.' : 'Règle non validée pour une cloison : calcul automatique bloqué.', 'isolation-brake', wall.isolation.freinVapeur, `${ref}.ISOLATION.FREIN_VAPEUR`, wall.typeParoi !== 'doublage')}
+            ${switchRow('Pare-vapeur', wall.typeParoi === 'doublage' ? 'Prix de vente direct : 3,50 €/m².' : 'Règle automatique limitée au doublage.', 'isolation-vapor', isolation.pareVapeur, `${ref}.ISOLATION.PARE_VAPEUR`, wall.typeParoi !== 'doublage')}
+            ${switchRow('Membrane hygrovariable / frein-vapeur', wall.typeParoi === 'doublage' ? 'Prix de vente direct : 5 €/m², cumulable avec le pare-vapeur.' : 'Règle automatique limitée au doublage.', 'isolation-brake', isolation.freinVapeur, `${ref}.ISOLATION.FREIN_VAPEUR`, wall.typeParoi !== 'doublage')}
           </div>
-          ${wall.typeParoi !== 'doublage' ? `<div class="alert warning full"><div><strong>Membranes non validées sur cloison</strong><p>Aucun prix automatique n’est appliqué. Une réponse métier de Guillaume est nécessaire.</p></div></div>` : ''}
+          ${thicknessWarning ? `<div class="alert warning full"><div><strong>Épaisseur supérieure au profil</strong><p>L’isolant dépasse ${wall.ossature.largeurProfilMm} mm. Le calcul reste autorisé, mais l’artisan doit confirmer explicitement la configuration.</p></div></div>` : ''}
         </div>
       ` : ''}
     </div>
@@ -530,6 +764,17 @@ function renderOpeningsIsolation(wall) {
         </div>
       `).join('') : emptyState('Aucun renfort', 'Ajoutez uniquement les renforts réellement prévus au chantier.')}
     </div>
+  `;
+}
+
+function renderIsolationLayer(layer, number, ref) {
+  const article = getIsolationArticle(layer?.articleCatalogueId) ?? ABAQUE_ISOLANTS_V2[0];
+  const currentPrice = layer?.prixAchatM2OverrideCents === undefined ? article.priceEuroM2 : centsToEuros(layer.prixAchatM2OverrideCents);
+  return `
+    <div class="field span-6">${labelWithTag(`Article couche ${number}`, `${ref}.ISOLATION.COUCHE_${number}.ARTICLE`)}<select class="select" id="isolation-layer-${number}">${isolationOptions(layer?.articleCatalogueId)}</select></div>
+    ${numberField(`Épaisseur couche ${number}`, `isolation-thickness-${number}`, layer?.epaisseurMm ?? article.thicknessMm, 'mm', `${ref}.ISOLATION.COUCHE_${number}.EPAISSEUR`, 'span-3', 1)}
+    ${numberField(`Coût achat HT/m² couche ${number}`, `isolation-price-${number}`, currentPrice, '€', `${ref}.ISOLATION.COUCHE_${number}.PRIX_ACHAT`, 'span-3', 0.01)}
+    <div class="field full">${switchRow(`Panneau semi-rigide couche ${number}`, 'Coefficient ×1,20 sur l’achat matière et la main-d’œuvre avant marge.', `isolation-semi-${number}`, layer?.semiRigide === true, `${ref}.ISOLATION.COUCHE_${number}.SEMI_RIGIDE`)}</div>
   `;
 }
 
@@ -569,10 +814,24 @@ function renderCeilingSection(piece) {
           <div class="field span-4">${labelWithTag('Suspente', `PLQ.PIECE.${p.id}.PLAFOND.SUSPENTE`)}<select class="select" id="ceiling-hanger">${hangerOptions(ceiling.suspenteArticleCatalogueId)}</select></div>
           <div class="field span-4">${labelWithTag('Finition', `PLQ.PIECE.${p.id}.PLAFOND.FINITION`)}<select class="select" id="ceiling-finish">${finishOptions(ceiling.finition.niveau)}</select></div>
           <div class="field span-8">${switchRow('Impression plafond', 'Disponible avec prêt à peindre ou finition soignée.', 'ceiling-impression', ceiling.finition.impression, `PLQ.PIECE.${p.id}.PLAFOND.IMPRESSION`)}</div>
+          <div class="field full">${switchRow('Isolation du plafond / combles', 'Abaque v2 : rouleaux/panneaux 10 % de perte, soufflé 3 %. Le R reste informatif.', 'ceiling-isolation-active', ceiling.isolation?.active ?? false, `PLQ.PIECE.${p.id}.PLAFOND.ISOLATION.ACTIVE`)}</div>
+          ${ceiling.isolation?.active ? `${renderCeilingIsolation(ceiling, p.id)}` : ''}
         </div>
         ${ceiling.type !== 'droit' ? `<div class="alert warning"><div><strong>Estimation simplifiée du rampant</strong><p>La plus-value est calculée, mais l’ossature complexe n’est pas redimensionnée automatiquement.</p></div></div>` : ''}
       ` : ''}
     </div>
+  `;
+}
+
+function renderCeilingIsolation(ceiling, pieceId) {
+  const isolation = ceiling.isolation;
+  const first = isolation.couches[0] ?? newIsolationLayer(ceiling.id, 1, ABAQUE_ISOLANTS_V2.find((article) => article.usage.includes('Combles')) ?? ABAQUE_ISOLANTS_V2[0]);
+  const article = getIsolationArticle(first.articleCatalogueId) ?? ABAQUE_ISOLANTS_V2[0];
+  return `
+    <div class="field span-6">${labelWithTag('Isolant plafond / combles', `PLQ.PIECE.${pieceId}.PLAFOND.ISOLATION.ARTICLE`)}<select class="select" id="ceiling-isolation-layer">${isolationOptions(first.articleCatalogueId)}</select></div>
+    ${numberField('Épaisseur isolation', 'ceiling-isolation-thickness', first.epaisseurMm ?? article.thicknessMm, 'mm', `PLQ.PIECE.${pieceId}.PLAFOND.ISOLATION.EPAISSEUR`, 'span-3', 1)}
+    ${numberField('Coût achat HT/m²', 'ceiling-isolation-price', first.prixAchatM2OverrideCents === undefined ? article.priceEuroM2 : centsToEuros(first.prixAchatM2OverrideCents), '€', `PLQ.PIECE.${pieceId}.PLAFOND.ISOLATION.PRIX_ACHAT`, 'span-3', 0.01)}
+    <div class="field full">${switchRow('Panneau semi-rigide', 'Coefficient ×1,20 sur matière et main-d’œuvre.', 'ceiling-isolation-semi', first.semiRigide === true, `PLQ.PIECE.${pieceId}.PLAFOND.ISOLATION.SEMI_RIGIDE`)}</div>
   `;
 }
 
@@ -582,10 +841,10 @@ function bindEquipmentWallEvents(wall) {
     renderStep(); touch();
   });
   wall.ouvertures.forEach((opening) => {
-    bindInput(`#opening-type-${cssEscape(opening.id)}`, 'change', (value) => { opening.type = value; touch(); });
-    bindInput(`#opening-width-${cssEscape(opening.id)}`, 'input', (value) => { opening.largeurM = positiveNumber(value); touch(); });
-    bindInput(`#opening-height-${cssEscape(opening.id)}`, 'input', (value) => { opening.hauteurM = positiveNumber(value); touch(); });
-    bindInput(`#opening-qty-${cssEscape(opening.id)}`, 'input', (value) => { opening.quantite = positiveInteger(value); touch(); });
+    bindInput(`#opening-type-${cssEscape(opening.id)}`, 'change', (value) => { opening.type = value; refreshPlanForWall(wall); touch(); });
+    bindInput(`#opening-width-${cssEscape(opening.id)}`, 'input', (value) => { opening.largeurM = positiveNumber(value); refreshPlanForWall(wall); touch(); });
+    bindInput(`#opening-height-${cssEscape(opening.id)}`, 'input', (value) => { opening.hauteurM = positiveNumber(value); refreshPlanForWall(wall); touch(); });
+    bindInput(`#opening-qty-${cssEscape(opening.id)}`, 'input', (value) => { opening.quantite = positiveInteger(value); refreshPlanForWall(wall); touch(); });
     bindCheckbox(`#opening-frame-${cssEscape(opening.id)}`, (checked) => { opening.ossaturePeripherique = checked; touch(); });
   });
   document.querySelectorAll('[data-remove-opening]').forEach((button) => button.addEventListener('click', () => {
@@ -593,20 +852,30 @@ function bindEquipmentWallEvents(wall) {
     renderStep(); touch();
   }));
   bindCheckbox('#isolation-active', (checked) => {
-    if (checked) wall.isolation = wall.isolation ?? { active: true, couches: [{ id: `${wall.id}:isolation:layer:1`, articleCatalogueId: 'insulation-glass-100', epaisseurMm: 100 }], pareVapeur: false, freinVapeur: false };
+    if (checked) {
+      const suggested = suggestIsolationForWall(wall);
+      wall.isolation = wall.isolation ?? { active: true, couches: [newIsolationLayer(wall.id, 1, suggested)], pareVapeur: false, freinVapeur: false, poseCroisee: false };
+    }
     wall.isolation.active = checked;
     renderStep(); touch();
   });
   if (wall.isolation?.active) {
-    bindInput('#isolation-layer-1', 'change', (value) => { wall.isolation.couches[0].articleCatalogueId = value; touch(); });
-    bindInput('#isolation-thickness-1', 'input', (value) => { wall.isolation.couches[0].epaisseurMm = positiveNumber(value); touch(); });
+    [1,2].forEach((number) => {
+      const layer = wall.isolation.couches[number - 1];
+      if (!layer) return;
+      bindInput(`#isolation-layer-${number}`, 'change', (value) => { applyIsolationArticle(layer, value); renderStep(); touch(); });
+      bindInput(`#isolation-thickness-${number}`, 'input', (value) => { layer.epaisseurMm = positiveNumber(value); renderStep(); touch(); });
+      bindInput(`#isolation-price-${number}`, 'input', (value) => { layer.prixAchatM2OverrideCents = eurosToCents(value); touch(); });
+      bindCheckbox(`#isolation-semi-${number}`, (checked) => { layer.semiRigide = checked; touch(); });
+    });
     bindSegments('#isolation-layers-count', (value) => {
-      if (value === '2' && wall.isolation.couches.length === 1) wall.isolation.couches.push({ id: `${wall.id}:isolation:layer:2`, articleCatalogueId: 'insulation-rock-45', epaisseurMm: 45 });
-      if (value === '1') wall.isolation.couches = wall.isolation.couches.slice(0, 1);
+      if (value === '2' && wall.isolation.couches.length === 1) {
+        wall.isolation.couches.push(newIsolationLayer(wall.id, 2, suggestIsolationForWall(wall, true)));
+      }
+      if (value === '1') { wall.isolation.couches = wall.isolation.couches.slice(0, 1); wall.isolation.poseCroisee = false; }
       renderStep(); touch();
     });
-    bindInput('#isolation-layer-2', 'change', (value) => { wall.isolation.couches[1].articleCatalogueId = value; touch(); });
-    bindInput('#isolation-thickness-2', 'input', (value) => { wall.isolation.couches[1].epaisseurMm = positiveNumber(value); touch(); });
+    bindCheckbox('#isolation-crossed', (checked) => { wall.isolation.poseCroisee = checked; touch(); });
     bindCheckbox('#isolation-vapor', (checked) => { wall.isolation.pareVapeur = checked; touch(); });
     bindCheckbox('#isolation-brake', (checked) => { wall.isolation.freinVapeur = checked; touch(); });
   }
@@ -634,11 +903,12 @@ function bindCeilingEvents(piece) {
   bindCheckbox('#ceiling-active', (checked) => {
     piece.plafond = piece.plafond ?? createCeiling();
     piece.plafond.actif = checked;
+    refreshPiecePlan(piece.id);
     renderStep(); touch();
   });
   const ceiling = piece.plafond;
   if (!ceiling?.actif) return;
-  bindInput('#ceiling-type', 'change', (value) => { ceiling.type = value; renderStep(); touch(); });
+  bindInput('#ceiling-type', 'change', (value) => { ceiling.type = value; refreshPiecePlan(piece.id); renderStep(); touch(); });
   bindSegments('#ceiling-surface-mode', (value) => {
     ceiling.calculDepuisPiece = value === 'piece';
     if (!ceiling.calculDepuisPiece && ceiling.surfaceSaisieM2 === undefined) ceiling.surfaceSaisieM2 = piece.longueurM * piece.largeurM;
@@ -655,6 +925,21 @@ function bindCeilingEvents(piece) {
     renderStep(); touch();
   });
   bindCheckbox('#ceiling-impression', (checked) => { ceiling.finition.impression = checked; touch(); });
+  bindCheckbox('#ceiling-isolation-active', (checked) => {
+    if (checked) {
+      const article = ABAQUE_ISOLANTS_V2.find((item) => item.usage.includes('Combles')) ?? ABAQUE_ISOLANTS_V2[0];
+      ceiling.isolation = ceiling.isolation ?? { active: true, couches: [newIsolationLayer(ceiling.id, 1, article)], pareVapeur: false, freinVapeur: false, poseCroisee: false };
+    }
+    ceiling.isolation.active = checked;
+    renderStep(); touch();
+  });
+  if (ceiling.isolation?.active) {
+    const layer = ceiling.isolation.couches[0];
+    bindInput('#ceiling-isolation-layer', 'change', (value) => { applyIsolationArticle(layer, value); renderStep(); touch(); });
+    bindInput('#ceiling-isolation-thickness', 'input', (value) => { layer.epaisseurMm = positiveNumber(value); touch(); });
+    bindInput('#ceiling-isolation-price', 'input', (value) => { layer.prixAchatM2OverrideCents = eurosToCents(value); touch(); });
+    bindCheckbox('#ceiling-isolation-semi', (checked) => { layer.semiRigide = checked; touch(); });
+  }
 }
 
 function renderOptionsStep() {
@@ -689,10 +974,10 @@ function renderOptionsStep() {
         ${numberField('Taux horaire', 'override-hourly-rate', centsToEuros(state.input.overrides.tauxHoraireCents ?? 4500), '€ HT/h', 'PLQ.OVERRIDE.TAUX_HORAIRE', 'span-4', 0.01)}
         <div class="field span-4">${labelWithTag('Mode de valorisation matière', 'PLQ.OVERRIDE.MATIERE.MODE')}<select class="select" id="material-pricing-mode"><option value="markup_pct" ${materialPricing.mode === 'markup_pct' ? 'selected':''}>Marge en %</option><option value="coefficient" ${materialPricing.mode === 'coefficient' ? 'selected':''}>Coefficient multiplicateur</option></select></div>
         ${numberField(materialPricing.mode === 'markup_pct' ? 'Marge matière' : 'Coefficient matière', 'material-pricing-value', materialPricing.value, materialPricing.mode === 'markup_pct' ? '%' : '×', 'PLQ.OVERRIDE.MATIERE.VALEUR', 'span-4', 0.01)}
-        ${numberField('Perte plaques', 'override-plate-loss', state.input.overrides.pertePlaquesPct ?? 0, '%', 'PLQ.OVERRIDE.PERTE_PLAQUES', 'span-4', 0.1)}
+        ${numberField('Perte plaques murs', 'override-plate-loss-wall', state.input.overrides.pertePlaquesMurPct ?? 7, '%', 'PLQ.OVERRIDE.PERTE_PLAQUES_MUR', 'span-4', 0.1)}${numberField('Perte plaques plafonds', 'override-plate-loss-ceiling', state.input.overrides.pertePlaquesPlafondPct ?? 10, '%', 'PLQ.OVERRIDE.PERTE_PLAQUES_PLAFOND', 'span-4', 0.1)}${numberField('Perte plaques rampants', 'override-plate-loss-sloped', state.input.overrides.pertePlaquesRampantPct ?? 12, '%', 'PLQ.OVERRIDE.PERTE_PLAQUES_RAMPANT', 'span-4', 0.1)}
         <div class="field span-8">${labelWithTag('Motif des modifications', 'PLQ.OVERRIDE.MOTIF')}<textarea class="textarea" id="override-reason" placeholder="Obligatoire pour tracer une modification manuelle.">${escapeHtml(state.input.overrides.motif ?? 'Paramètres ajustés par l’artisan dans l’interface Plaquiste V2.')}</textarea></div>
       </div>
-      <div class="alert warning"><div><strong>Perte plaques non validée définitivement</strong><p>La valeur initiale reste 0 %. Toute modification est visible dans le récapitulatif et la trace.</p></div></div>
+      <div class="alert info"><div><strong>Pertes plaques validées par Guillaume</strong><p>Murs 7 %, plafonds droits 10 %, rampants 12 %. Toute modification artisan reste tracée.</p></div></div>
     </div>
 
     <div class="card">
@@ -729,7 +1014,9 @@ function renderOptionsStep() {
     state.input.overrides.materialPricing = { mode, value: nonNegativeNumber(value) };
     touch();
   });
-  bindInput('#override-plate-loss', 'input', (value) => { state.input.overrides.pertePlaquesPct = nonNegativeNumber(value); touch(); });
+  bindInput('#override-plate-loss-wall', 'input', (value) => { state.input.overrides.pertePlaquesMurPct = nonNegativeNumber(value); touch(); });
+  bindInput('#override-plate-loss-ceiling', 'input', (value) => { state.input.overrides.pertePlaquesPlafondPct = nonNegativeNumber(value); touch(); });
+  bindInput('#override-plate-loss-sloped', 'input', (value) => { state.input.overrides.pertePlaquesRampantPct = nonNegativeNumber(value); touch(); });
   bindInput('#override-reason', 'input', (value) => { state.input.overrides.motif = value; touch(); });
   document.querySelector('#addDirectOptionBtn').addEventListener('click', () => {
     o.optionsDirectes.push({ id: uid('direct'), label: 'Option complémentaire', active: true, quantite: 1, unite: 'forfait', prixVenteUnitaireHtCents: 0, scope: 'chantier' });
@@ -1002,8 +1289,9 @@ function normalizeInputForUi() {
 
 function normalizeIsolationIds(isolation, ownerId) {
   if (!isolation) return;
+  isolation.poseCroisee ??= false;
   isolation.couches ??= [];
-  isolation.couches.forEach((layer, index) => { layer.id ??= `${ownerId}:isolation:layer:${index + 1}`; });
+  isolation.couches.forEach((layer, index) => { layer.id ??= `${ownerId}:isolation:layer:${index + 1}`; layer.semiRigide ??= false; });
 }
 
 function setStableSkinIds(owner, count) {
@@ -1066,14 +1354,14 @@ function touch() {
 }
 
 function saveDraft(showNotification) {
-  localStorage.setItem('speedarti-plaquiste-v2-draft', JSON.stringify(state.input));
+  localStorage.setItem('speedarti-plaquiste-v2-draft-v050', JSON.stringify(state.input));
   document.querySelector('#autosaveLabel').textContent = `Brouillon enregistré à ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
   if (showNotification) showToast('Brouillon enregistré localement.', 'success');
 }
 
 function loadDraft() {
   try {
-    const value = localStorage.getItem('speedarti-plaquiste-v2-draft');
+    const value = localStorage.getItem('speedarti-plaquiste-v2-draft-v050') ?? localStorage.getItem('speedarti-plaquiste-v2-draft-v040');
     if (!value) return null;
     const parsed = JSON.parse(value);
     return parsed?.schemaVersion === 2 ? parsed : null;
@@ -1081,10 +1369,14 @@ function loadDraft() {
 }
 
 function createInitialInput() {
+  const demoPiece = createPiece(1);
+  demoPiece.nom = 'Chambre — démonstration';
+  demoPiece.murs[0].ouvertures.push({ id: uid('opening'), type: 'porte', largeurM: 0.9, hauteurM: 2.1, quantite: 1, ossaturePeripherique: true });
+  demoPiece.murs[1].ouvertures.push({ id: uid('opening'), type: 'fenetre', largeurM: 1.2, hauteurM: 1.15, quantite: 1, ossaturePeripherique: true });
   return {
     schemaVersion: 2,
     id: uid('quote'),
-    nomCalcul: 'Cloison chambre — démonstration',
+    nomCalcul: 'Chambre — démonstration plan 2D',
     contexte: {
       usageBatiment: 'habitation',
       logementAcheveDepuisPlusDe2Ans: true,
@@ -1092,8 +1384,8 @@ function createInitialInput() {
       tvaMode: 'suggestion_auto',
       eligibiliteConfirmee: true,
     },
-    pieces: [],
-    mursSimples: [createWall('mur_simple', undefined, 'Cloison chambre', 2, 2.7)],
+    pieces: [demoPiece],
+    mursSimples: [],
     optionsChantier: {
       complexite: 'moyenne',
       accesDifficile: false,
@@ -1106,7 +1398,9 @@ function createInitialInput() {
     overrides: {
       tauxHoraireCents: 4500,
       materialPricing: { mode: 'markup_pct', value: 30 },
-      pertePlaquesPct: 0,
+      pertePlaquesMurPct: 7,
+      pertePlaquesPlafondPct: 10,
+      pertePlaquesRampantPct: 12,
       motif: 'Paramètres visibles de démonstration dans l’interface Plaquiste V2.',
     },
   };
@@ -1218,7 +1512,24 @@ function plateOptions(selected) { return [
   ['BA13_STANDARD','BA13 standard'], ['BA13_HYDRO','BA13 hydrofuge'], ['BA13_PHONIQUE','BA13 phonique'], ['BA13_FEU','BA13 feu'], ['HABITO','Habito'], ['BA10','BA10 — valeur métier à valider'], ['BA15','BA15 — valeur métier à valider'], ['BA18','BA18 — valeur métier à valider'], ['FERMACELL','Fermacell — valeur métier à valider'],
 ].map(([value,label]) => `<option value="${value}" ${selected === value ? 'selected':''}>${label}</option>`).join(''); }
 function finishOptions(selected) { return [['aucune','Aucune finition'],['bandes','Bandes uniquement — 5 €/m²'],['pret_a_peindre','Prêt à peindre — 9 €/m²'],['soignee','Finition soignée — 13 €/m²']].map(([value,label]) => `<option value="${value}" ${selected === value ? 'selected':''}>${label}</option>`).join(''); }
-function isolationOptions(selected) { return [['insulation-glass-100','Laine de verre — paquet 10 m²'],['insulation-rock-45','Laine de roche — paquet 6 m²']].map(([value,label]) => `<option value="${value}" ${selected === value ? 'selected':''}>${label}</option>`).join(''); }
+function isolationOptions(selected) {
+  const groups = new Map();
+  ABAQUE_ISOLANTS_V2.forEach((article) => {
+    const group = groups.get(article.usage) ?? [];
+    group.push(article); groups.set(article.usage, group);
+  });
+  return [...groups.entries()].map(([usage, articles]) => `<optgroup label="${escapeAttribute(usage)}">${articles.map((article) => `<option value="${article.id}" ${selected === article.id ? 'selected':''}>${escapeHtml(article.label)} — ${article.priceEuroM2.toFixed(2).replace('.', ',')} €/m² achat</option>`).join('')}</optgroup>`).join('');
+}
+function getIsolationArticle(id) { return ABAQUE_ISOLANTS_V2.find((article) => article.id === id); }
+function applyIsolationArticle(layer, id) { const article = getIsolationArticle(id); if (!article) return; layer.articleCatalogueId = id; layer.epaisseurMm = article.thicknessMm; layer.prixAchatM2OverrideCents = eurosToCents(article.priceEuroM2); }
+function newIsolationLayer(ownerId, number, article) { return { id: `${ownerId}:isolation:layer:${number}`, articleCatalogueId: article.id, epaisseurMm: article.thicknessMm, prixAchatM2OverrideCents: eurosToCents(article.priceEuroM2), semiRigide: false }; }
+function suggestIsolationForWall(wall, secondLayer = false) {
+  const preferredUsage = wall.typeParoi === 'cloison' ? 'Cloison' : 'Doublage';
+  const maxThickness = secondLayer ? 45 : wall.ossature.largeurProfilMm;
+  return ABAQUE_ISOLANTS_V2.find((article) => article.usage.startsWith(preferredUsage) && article.thicknessMm <= maxThickness)
+    ?? ABAQUE_ISOLANTS_V2.find((article) => article.thicknessMm <= maxThickness)
+    ?? ABAQUE_ISOLANTS_V2[0];
+}
 function hangerOptions(selected) { return [['hanger-90','Suspente 90 mm'],['hanger-120','Suspente 120 mm'],['hanger-180','Suspente 180 mm'],['hanger-240','Suspente 240 mm'],['hanger-300','Suspente 300 mm']].map(([value,label]) => `<option value="${value}" ${selected === value ? 'selected':''}>${label}</option>`).join(''); }
 
 function bindInput(selector, event, callback) {
