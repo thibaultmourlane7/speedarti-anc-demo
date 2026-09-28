@@ -344,11 +344,12 @@
       groundwater:'Remontée nappe',environment:'Contraintes',geology:'Géologie',
       investigation:'Sondages / Porchet',layout:'Implantation ANC',trenches:'Tranchées'
     };
-    return (s.maps||[]).map(m=>`<button class="btn ghost small anc-map-preset" type="button" data-kind="${esc(m.kind)}">${esc(labels[m.kind]||m.title)}</button>`).join('');
+    const active=s.mapView?.activeKind||'layout';
+    return (s.maps||[]).map(m=>`<button class="btn ${active===m.kind?'primary':'ghost'} small anc-map-preset" type="button" data-kind="${esc(m.kind)}">${esc(labels[m.kind]||m.title)}</button>`).join('');
   }
 
   function enhanceMaps() {
-    const section=document.getElementById('cartes');
+    const section=document.getElementById('geometrie');
     const s=state();
     if(!section||!s||document.getElementById('anc-v3-live-map'))return;
 
@@ -360,8 +361,12 @@
     }
 
     const layers=(s.mapLayers||[]).filter(l=>l.id!=='anc-objects');
-    const scale=s.mapView?.exportScale||500;
+    const activeKind=s.mapView?.activeKind||'layout';
+    const activeMap=(s.maps||[]).find(m=>m.kind===activeKind)||(s.maps||[]).find(m=>m.kind==='layout');
+    const scale=Number(activeMap?.scale||s.mapView?.exportScale||500);
     const connected=(s.maps||[]).filter(m=>m.liveConnected).length;
+    const frozen=!!activeMap?.preview;
+    const frozenAt=activeMap?.snapshotAt?new Date(activeMap.snapshotAt).toLocaleString('fr-FR'):'';
     const body=`
       <div class="notice good" style="margin-bottom:12px">
         <b>Cartes connectées : ${connected}/${(s.maps||[]).length}</b>
@@ -369,9 +374,16 @@
           ?` — centre commun ${lat.toFixed(6)} / ${lng.toFixed(6)}`
           :' — localisez d’abord le chantier pour charger les sources officielles.'}
       </div>
-      <div class="anc-v3-toolbar" style="margin-bottom:12px">
-        <button class="btn primary" type="button" id="anc-connect-all-maps">🔌 Actualiser toutes les cartes</button>
+      <div class="notice info" style="margin-bottom:12px">
+        <b>Un seul éditeur :</b> l’implantation ANC et le calcul métrique utilisent cette même carte. Changez simplement de vue ou de calque, dessinez et mesurez ici.
+      </div>
+      <div class="anc-v3-toolbar" style="margin-bottom:10px">
+        <button class="btn secondary" type="button" id="anc-connect-all-maps">🔌 Actualiser toutes les cartes</button>
         ${mapPresetButtons(s)}
+      </div>
+      <div class="anc-v3-toolbar" style="margin-bottom:12px">
+        <button class="btn primary" type="button" id="anc-freeze-map">${frozen?'🔄 Mettre à jour l’image figée':'📌 Figer l’image dans le dossier'}</button>
+        ${frozen?`<span class="anc-v3-status CONFIRMED">Image figée v${Number(activeMap.snapshotVersion)||1}</span><span class="anc-source-note">Dernière mise à jour : ${esc(frozenAt)}</span>`:''}
       </div>
       <div class="anc-map-grid">
         <div><div id="anc-v3-map"></div></div>
@@ -383,7 +395,7 @@
             <option value="tree">Arbre / végétation</option><option value="annotation">Annotation</option>
           </select></div>
           <div class="field" style="margin-top:10px"><label>Échelle du plan / export</label><select id="anc-map-scale" class="select">
-            ${[100,200,250,500,1000].map(x=>`<option value="${x}" ${Number(scale)===x?'selected':''}>1:${x}</option>`).join('')}
+            ${[100,200,250,400,500,1000,2000,5000,25000,50000].map(x=>`<option value="${x}" ${Number(scale)===x?'selected':''}>1:${x.toLocaleString('fr-FR')}</option>`).join('')}
           </select></div>
           <h3>Calques et intensité</h3>
           ${layers.map(layerRow).join('')}
@@ -398,10 +410,31 @@
       setTimeout(()=>api()?.render?.(),250);
     });
 
+    document.getElementById('anc-freeze-map')?.addEventListener('click',async e=>{
+      const b=e.currentTarget;
+      const kind=s.mapView?.activeKind||'layout';
+      b.disabled=true;
+      b.textContent='Capture en cours…';
+      try{
+        const result=await window.ANCV3Map?.freezeCurrentMap?.(kind);
+        if(!result)throw new Error('Capture non disponible.');
+        api()?.save?.();
+        b.textContent='✓ Image enregistrée dans le dossier';
+        setTimeout(()=>api()?.render?.(),350);
+      }catch(err){
+        alert('Impossible de figer la carte : '+(err?.message||err));
+        b.disabled=false;
+        b.textContent='📌 Figer l’image dans le dossier';
+      }
+    });
+
     document.querySelectorAll('.anc-map-preset').forEach(el=>el.addEventListener('click',e=>{
       const kind=e.currentTarget.dataset.kind;
-      window.ANCV3Map?.applyPreset?.(kind);
+      s.mapView.activeKind=kind;
       const item=(s.maps||[]).find(m=>m.kind===kind);
+      if(item?.scale)s.mapView.exportScale=Number(item.scale);
+      api()?.save?.();
+      window.ANCV3Map?.applyPreset?.(kind);
       if(kind==='flood' && item?.connection?.externalUrl){
         const open=confirm('La carte interactive affiche la localisation et le statut Géorisques. Ouvrir aussi le rapport officiel Géorisques dans un nouvel onglet ?');
         if(open)window.open(item.connection.externalUrl,'_blank','noopener');
@@ -417,7 +450,10 @@
       window.ANCV3Map?.setLayerOpacity?.(id,v);api()?.save?.();
     }));
     document.getElementById('anc-map-scale')?.addEventListener('change',e=>window.ANCV3Map?.setExportScale?.(e.target.value));
-    setTimeout(()=>window.ANCV3Map?.init?.('anc-v3-map'),80);
+    setTimeout(()=>{
+      window.ANCV3Map?.init?.('anc-v3-map');
+      setTimeout(()=>window.ANCV3Map?.applyPreset?.(s.mapView?.activeKind||'layout'),120);
+    },80);
   }
 
   function enhanceReview() {
