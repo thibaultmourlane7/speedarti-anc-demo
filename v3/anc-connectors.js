@@ -478,11 +478,15 @@
       base.note='Le fond cartographique est IGN ; le zonage inondation détaillé est fourni par le rapport officiel Géorisques au point.';
     }else if(src.mode==='wms-group'){
       base.children=src.children||[];
-      const plan=registry.location;
-      base.imageUrl=wmsStaticMapUrl({
-        url:plan.url,layers:plan.layers,latitude,longitude,scale:effectiveScale,printWidthMm
-      });
-      base.note='Carte interactive : superposition des couches BRGM/Géorisques sur fond IGN.';
+      const first=base.children[0];
+      if(first){
+        base.imageUrl=wmsStaticMapUrl({
+          url:first.url,
+          layers:base.children.map(x=>x.layers).join(','),
+          latitude,longitude,scale:effectiveScale,printWidthMm,transparent:false
+        });
+      }
+      base.note='Carte interactive : couches BRGM/Géorisques superposables individuellement sur fond IGN.';
     }else if(src.mode==='composite'){
       base.baseLayers=src.baseLayers||['aerial','cadastral'];
       const aerial=registry.aerial;
