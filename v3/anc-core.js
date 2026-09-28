@@ -193,14 +193,22 @@
     add('BLOCKING','Dossier','Client identifié', !!(state.owner?.lastName || state.owner?.company));
     add('BLOCKING','Dossier','Adresse du chantier', !!(state.parcel?.address && (state.parcel?.city || state.parcel?.postalCode)));
     add('WARNING','Dossier','Localisation confirmée', !!(state.parcel?.lat && state.parcel?.lng), state.parcel?.geocodeSource || '');
-    add('BLOCKING','Parcelles','Au moins une parcelle', selectedParcels(state).length > 0);
-    add('WARNING','Parcelles','Surface cadastrale renseignée', totalParcelSurface(state) > 0, totalParcelSurface(state) ? `${totalParcelSurface(state).toFixed(2)} m²` : '');
+    const parcels=selectedParcels(state);
+    add('BLOCKING','Parcelles','Au moins une parcelle', parcels.length > 0);
+    add('WARNING','Parcelles','Références cadastrales complètes', parcels.length>0 && parcels.every(p=>String(p.section||'').trim() && String(p.number||'').trim()), parcels.map(parcelLabel).join(' · '));
+    add('WARNING','Parcelles','Surface de chaque parcelle renseignée', parcels.length>0 && parcels.every(p=>(n(p.surfaceM2)||0)>0), parcels.map(p=>`${parcelLabel(p)} : ${n(p.surfaceM2)||'—'} m²`).join(' · '));
+    add('WARNING','Parcelles','Surface cadastrale totale', totalParcelSurface(state) > 0, totalParcelSurface(state) ? `${totalParcelSurface(state).toFixed(2)} m²` : '');
     add('WARNING','Géologie','Contexte géologique vérifié', state.dataStatus.geology === STATUS.CONFIRMED || state.dataStatus.geology === STATUS.MANUALLY_CORRECTED);
     add('WARNING','Visite','Météo vérifiée', state.dataStatus.weather === STATUS.CONFIRMED || state.dataStatus.weather === STATUS.MANUALLY_CORRECTED);
     add('WARNING','Environnement','Contraintes environnementales vérifiées', state.dataStatus.environment === STATUS.CONFIRMED || state.dataStatus.environment === STATUS.MANUALLY_CORRECTED);
     add('WARNING','Sondages','Au moins un sondage', (state.boreholes||[]).length > 0);
-    add('WARNING','Porchet','Tests Porchet renseignés', (state.porchets||[]).length > 0);
+    const porchets=state.porchets||[];
+    add('WARNING','Porchet','Tests Porchet renseignés', porchets.length > 0);
+    const porchetReadings=porchets.flatMap(p=>p.readings||[]);
+    add('WARNING','Porchet','Unités et mesures principales renseignées', porchetReadings.length>0 && porchetReadings.every(r=>n(r.durationMin)!==undefined && n(r.volumeMl)!==undefined), porchetReadings.length?`${porchetReadings.length} relevé(s)`:'');
+    add('WARNING','Porchet','Niveaux départ / fin renseignés', porchetReadings.length>0 && porchetReadings.every(r=>n(r.startLevelCm)!==undefined && n(r.endLevelCm)!==undefined), 'Unités : cm');
     add('INFO','Photos','Photos du chantier', (state.photos||[]).length > 0);
+    add('INFO','Porchet','Photos d’essai Porchet', porchets.length===0 || (state.photos||[]).some(p=>p.targetType==='porchet'), 'Caméra / Galerie / Fichier disponibles');
     add('WARNING','Cartographie','Échelle toujours visible', state.mapView.scaleAlwaysVisible === true);
     add('WARNING','Cartographie','Nord toujours visible', state.mapView.northAlwaysVisible === true);
 
