@@ -6,7 +6,7 @@
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <meta content="#0b6bcb" name="theme-color"/>
 <meta content="SpeedArti ANC — module autonome de création de rapports ANC" name="description"/>
-<title>SpeedArti ANC — V2.6 géolocalisation automatisée</title>
+<title>SpeedArti ANC — V3.0 métier Fred</title>
 <style>:root{
   --blue:#0b6bcb;--blue2:#168ceb;--navy:#15304d;--ink:#24364a;--muted:#66788d;
   --bg:#f1f6fb;--surface:#fff;--line:#d7e3ee;--soft:#eaf4ff;--green:#17804a;--orange:#b86a08;--red:#bf3636;
@@ -45,6 +45,9 @@
 
 </style>
 <link rel="manifest" href="manifest.webmanifest"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+<link rel="stylesheet" href="v3/anc-v3.css"/>
 </head>
 <body>
 <div id="app"></div>
@@ -58,8 +61,8 @@
 
   const STORAGE_KEY = 'speedarti-anc-v2-6-beta';
   const LEGACY_STORAGE_KEYS = ['speedarti-anc-v2-5-beta','speedarti-anc-v2-4-1-auditee','speedarti-anc-v2-3-auditee'];
-  const APP_VERSION = '2.6.0-beta';
-  const BUILD_DATE = '12/08/2026';
+  const APP_VERSION = '3.0.0-beta';
+  const BUILD_DATE = '28/09/2026';
   const DB_NAME = 'speedarti-anc-v25';
   const DB_VERSION = 1;
   const DEMO_MODE = true;
@@ -106,13 +109,13 @@
   function ruleStatusSummary(s=state){const enabled=(s.rules||[]).filter(r=>r.enabled);return{enabled:enabled.length,validated:enabled.filter(r=>r.validation==='validated').length,provisional:enabled.filter(r=>r.validation!=='validated').length}}
 
   const mapTemplates = () => [
-    map('location','Carte de situation et localisation générale','mandatory','Contexte parcellaire',25000,'Carte topographique IGN / Géoportail'),
-    map('cadastral','Plan cadastral de localisation de la parcelle','mandatory','Contexte parcellaire',2000,'Cadastre IGN / Géoportail'),
-    map('aerial','Vue aérienne / satellite — zone d’investigation ANC','mandatory','Contexte parcellaire',500,'Orthophotographie IGN / Géoportail'),
+    map('location','Carte de situation et localisation générale','mandatory','Contexte parcellaire',25000,'Carte topographique IGN / cartes.gouv.fr'),
+    map('cadastral','Plan cadastral de localisation de la parcelle','mandatory','Contexte parcellaire',2000,'Cadastre IGN / Géoplateforme / cartes.gouv.fr'),
+    map('aerial','Vue aérienne / satellite — zone d’investigation ANC','mandatory','Contexte parcellaire',500,'Orthophotographie IGN / Géoplateforme / cartes.gouv.fr'),
     map('flood','Carte Géorisques — risque d’inondation','conditional','Contraintes environnementales',5000,'Géorisques — inondation'),
     map('groundwater','Carte Géorisques — remontée de nappe','conditional','Contraintes environnementales',5000,'Géorisques — remontée de nappe'),
     map('environment','Carte des contraintes environnementales complémentaires','conditional','Contraintes environnementales',5000,'DREAL / ARS / SANDRE / autre source officielle'),
-    map('geology','Carte géologique BRGM','mandatory','Contexte géologique',25000,'BRGM / InfoTerre / Géoportail'),
+    map('geology','Carte géologique BRGM','mandatory','Contexte géologique',25000,'BRGM / InfoTerre'),
     map('investigation','Annexe 1 — localisation des sondages et tests Porchet','mandatory','Annexe 1',400,'Orthophoto et cadastre IGN — annotations bureau d’études'),
     map('layout','Annexe 2 — plan d’implantation de la filière ANC','mandatory','Annexe 2',400,'Orthophoto et cadastre IGN — schéma de principe'),
     map('trenches','Annexe 3 — tranchées d’infiltration à faible profondeur','conditional','Annexe 3',200,'Schéma technique généré — validation professionnelle obligatoire'),
@@ -134,7 +137,7 @@
 
   function defaultStudy(){
     return {
-      version:2.6, auditVersion:APP_VERSION, studyId:uid('study'), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), revision:1, archived:false, activeTab:'etudes',
+      version:3.0, auditVersion:APP_VERSION, studyId:uid('study'), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), revision:1, archived:false, activeTab:'etudes',
       reference:`ANC-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`, title:'Nouvelle étude ANC', status:'draft',
       company:{name:'SpeedArti — Module Études ANC',address:'Adresse professionnelle à configurer',phone:'00 00 00 00 00',email:'demo@speedarti.example',legal:'SIREN / APE à renseigner',logo:''},
       owner:{civility:'Mme',lastName:'',firstName:'',company:'',email:'',phone:'',requesterSame:true,requester:''},
@@ -189,7 +192,7 @@
   function normalize(s){
     const base=defaultStudy();
     s=mergeDeep(base,s&&typeof s==='object'?s:{});
-    s.version=2.6;s.auditVersion=APP_VERSION;s.studyId=s.studyId||uid('study');s.createdAt=s.createdAt||new Date().toISOString();s.revision=num(s.revision)||1;s.archived=!!s.archived;
+    s.version=3.0;s.auditVersion=APP_VERSION;s.studyId=s.studyId||uid('study');s.createdAt=s.createdAt||new Date().toISOString();s.revision=num(s.revision)||1;s.archived=!!s.archived;
     s.clients=Array.isArray(s.clients)?s.clients:demoClientDirectory();const defaults=ruleDefaults();const existing=new Map((s.rules||[]).map(r=>[r.id,r]));s.rules=defaults.map(r=>mergeDeep(r,existing.get(r.id)||{})).concat((s.rules||[]).filter(r=>!defaults.some(d=>d.id===r.id)));
     s.boreholes=(s.boreholes||[]).map((b,bi)=>{const out=mergeDeep(borehole(bi+1),b);out.horizons=(out.horizons||[]).map(h=>mergeDeep(horizon(),h));return out});
     s.porchets=(s.porchets||[]).map((p,pi)=>{const out=mergeDeep(porchet(pi+1),p);out.readings=(out.readings||[]).map((r,i)=>mergeDeep(porchetReading(i+1),r));syncPorchet(out,s);return out});
@@ -223,7 +226,7 @@
   function render(){
     document.documentElement.dataset.tab=state.activeTab;
     const online=navigator.onLine;
-    $('#app').innerHTML=`<div class="app"><header class="topbar"><div class="brand"><div class="brand-mark">S</div><div><strong>SpeedArti ANC</strong><small>V2.5 bêta technique — ${DEMO_MODE?'MODE DÉMONSTRATION':'MODE PRODUCTION'} · build ${BUILD_DATE}</small></div></div><div class="top-actions"><span class="pwa-banner"><i class="sync-dot ${online?'':'offline'}"></i>${online?'En ligne':'Hors connexion'}</span><span class="save-state">✓ Sauvegardé localement</span><button class="btn success" data-action="generate-all">⚡ Tout calculer</button><button class="btn secondary" data-action="save-version">Créer une version</button><button class="btn secondary" data-action="demo">Charger la démo</button><button class="btn secondary" data-action="import-json">Importer</button><button class="btn secondary" data-action="export-json">Sauvegarde JSON</button><button class="btn primary" data-action="print">Exporter PDF</button></div></header>${renderTabs()}<main class="main">${renderStudies()}${renderClients()}${renderDossier()}${renderTerrain()}${renderSondages()}${renderPorchet()}${renderGeometry()}${renderPhotos()}${renderMaps()}${renderAutomation()}${renderRules()}${renderValidation()}${renderTests()}${renderReport()}</main>${renderMapModal()}</div>`;
+    $('#app').innerHTML=`<div class="app"><header class="topbar"><div class="brand"><div class="brand-mark">S</div><div><strong>SpeedArti ANC</strong><small>V3.0 métier Fred — ${DEMO_MODE?'MODE DÉMONSTRATION':'MODE PRODUCTION'} · build ${BUILD_DATE}</small></div></div><div class="top-actions"><span class="pwa-banner"><i class="sync-dot ${online?'':'offline'}"></i>${online?'En ligne':'Hors connexion'}</span><span class="save-state">✓ Sauvegardé localement</span><button class="btn success" data-action="generate-all">⚡ Tout calculer</button><button class="btn secondary" data-action="save-version">Créer une version</button><button class="btn secondary" data-action="demo">Charger la démo</button><button class="btn secondary" data-action="import-json">Importer</button><button class="btn secondary" data-action="export-json">Sauvegarde JSON</button><button class="btn primary" data-action="print">Exporter PDF</button></div></header>${renderTabs()}<main class="main">${renderStudies()}${renderClients()}${renderDossier()}${renderTerrain()}${renderSondages()}${renderPorchet()}${renderGeometry()}${renderPhotos()}${renderMaps()}${renderAutomation()}${renderRules()}${renderValidation()}${renderTests()}${renderReport()}</main>${renderMapModal()}</div>`;
     bind();
     if(state.activeTab==='rapport') renderReportPages();
   }
@@ -635,6 +638,28 @@
 
   function importPhoto(file,category='site'){return readImageCompressed(file).then(data=>({id:uid('photo'),category,title:file.name.replace(/\.[^.]+$/,''),caption:'',data,targetType:'',targetId:''}))}
 
+  // API publique minimale pour les extensions V3 du dépôt de démonstration.
+  // Aucune écriture SpeedArti / GSTAI n'est exposée ici.
+  window.SpeedArtiANC = {
+    getState:()=>state,
+    render:()=>render(),
+    save:()=>scheduleSave(),
+    geocodeAddress:(opts={})=>geocodeAddress(opts),
+    useDeviceGps:()=>useDeviceGps(),
+    detectParcelFromCoordinates:(opts={})=>detectParcelFromCoordinates(opts),
+    recalculatePorchet:()=>{recalculateAllPorchets();scheduleSave();render()},
+    async addPhotoFile(file,category='site',targetType='',targetId=''){
+      const photo=await importPhoto(file,category);
+      photo.targetType=targetType||'';
+      photo.targetId=targetId||'';
+      photo.captureDate=new Date().toISOString();
+      photo.source=file?.name||'appareil';
+      state.photos.push(photo);
+      scheduleSave();
+      return photo;
+    }
+  };
+
   document.addEventListener('click',e=>{const tool=e.target.closest('[data-tool]');if(tool){editor.tool=tool.dataset.tool;$$('[data-tool]').forEach(b=>b.classList.toggle('tool-active',b===tool))}});
   const requestedTab=new URLSearchParams(location.search).get('tab');if(requestedTab)state.activeTab=requestedTab;
   window.addEventListener('online',()=>{state.sync.online=true;render()});window.addEventListener('offline',()=>{state.sync.online=false;render()});
@@ -643,5 +668,11 @@
   recoverFromIndexedDb();
 })();
 </script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script src="v3/anc-core.js"></script>
+<script src="v3/anc-connectors.js"></script>
+<script src="v3/anc-map.js"></script>
+<script src="v3/anc-ui.js"></script>
 </body>
 </html>
