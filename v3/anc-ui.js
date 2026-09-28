@@ -351,7 +351,7 @@
   function enhanceMaps() {
     const section=document.getElementById('geometrie');
     const s=state();
-    if(!section||!s||document.getElementById('anc-v3-live-map'))return;
+    if(!section||!s||s.activeTab!=='geometrie'||document.getElementById('anc-v3-live-map'))return;
 
     const lat=num(s.parcel?.lat),lng=num(s.parcel?.lng);
     if(lat!==undefined&&lng!==undefined && s.mapsConnectionKey!==mapsConnectionKey(s)){
@@ -367,7 +367,14 @@
     const connected=(s.maps||[]).filter(m=>m.liveConnected).length;
     const frozen=!!activeMap?.preview;
     const frozenAt=activeMap?.snapshotAt?new Date(activeMap.snapshotAt).toLocaleString('fr-FR'):'';
-    const body=`
+    const metric=core()?.mapMetricSummary?.(s)||{};
+    const metricCards=`<div class="metric-results" style="margin-bottom:12px">
+      <div class="metric-result ${metric.parcelAreaM2?'ok':'warn'}"><strong>${metric.parcelAreaM2?metric.parcelAreaM2.toLocaleString('fr-FR',{maximumFractionDigits:1})+' m²':'—'}</strong><span>Parcelle dessinée</span></div>
+      <div class="metric-result ${metric.availableAreaM2?'ok':'warn'}"><strong>${metric.availableAreaM2?metric.availableAreaM2.toLocaleString('fr-FR',{maximumFractionDigits:1})+' m²':'—'}</strong><span>Zone disponible</span></div>
+      <div class="metric-result ${metric.houseToTreatmentM!==undefined?'ok':'warn'}"><strong>${metric.houseToTreatmentM!==undefined?metric.houseToTreatmentM.toLocaleString('fr-FR',{maximumFractionDigits:1})+' m':'—'}</strong><span>Bâtiment → filière</span></div>
+      <div class="metric-result ${metric.pipeLengthM?'ok':'warn'}"><strong>${metric.pipeLengthM?metric.pipeLengthM.toLocaleString('fr-FR',{maximumFractionDigits:1})+' m':'—'}</strong><span>Canalisation dessinée</span></div>
+    </div>`;
+    const body=`${metricCards}
       <div class="notice good" style="margin-bottom:12px">
         <b>Cartes connectées : ${connected}/${(s.maps||[]).length}</b>
         ${lat!==undefined&&lng!==undefined
@@ -389,6 +396,7 @@
         <div><div id="anc-v3-map"></div></div>
         <aside>
           <div class="field"><label>Objet à dessiner</label><select id="anc-map-role" class="select">
+            <option value="parcel">Parcelle</option><option value="available">Zone disponible ANC</option>
             <option value="house">Bâtiment</option><option value="treatment">Filière ANC</option><option value="pipe">Canalisation</option>
             <option value="borehole">Sondage</option><option value="porchet">Test Porchet</option><option value="well">Puits / captage</option>
             <option value="outlet">Exutoire / fossé</option><option value="exclusion">Zone d’exclusion</option><option value="access">Accès</option>
@@ -434,6 +442,12 @@
       const item=(s.maps||[]).find(m=>m.kind===kind);
       if(item?.scale)s.mapView.exportScale=Number(item.scale);
       api()?.save?.();
+      document.querySelectorAll('.anc-map-preset').forEach(btn=>{
+        btn.classList.toggle('primary',btn.dataset.kind===kind);
+        btn.classList.toggle('ghost',btn.dataset.kind!==kind);
+      });
+      const scaleSelect=document.getElementById('anc-map-scale');
+      if(scaleSelect&&item?.scale)scaleSelect.value=String(item.scale);
       window.ANCV3Map?.applyPreset?.(kind);
       if(kind==='flood' && item?.connection?.externalUrl){
         const open=confirm('La carte interactive affiche la localisation et le statut Géorisques. Ouvrir aussi le rapport officiel Géorisques dans un nouvel onglet ?');
