@@ -43,6 +43,7 @@
       house:'Bâtiment', treatment:'Filière ANC', pipe:'Canalisation', borehole:'Sondage',
       porchet:'Test Porchet', well:'Puits / captage', outlet:'Exutoire / fossé',
       exclusion:'Zone d’exclusion', access:'Accès', tree:'Arbre / végétation',
+      parcel:'Parcelle', available:'Zone disponible ANC',
       annotation:'Annotation'
     })[role] || role || 'Objet ANC';
   }
@@ -390,7 +391,12 @@
     const state=getState();
     if(!state) return;
     window.ANCV3Core?.ensureV3(state);
-    state.mapView.exportScale=Number(scale)||500;
+    const value=Number(scale)||500;
+    state.mapView.exportScale=value;
+    const active=(state.maps||[]).find(m=>m.kind===(state.mapView.activeKind||'layout'));
+    if(active)active.scale=value;
+    const lat=Number(state.parcel?.lat),lng=Number(state.parcel?.lng);
+    if(map&&Number.isFinite(lat)&&Number.isFinite(lng))map.setView([lat,lng],zoomForScale(value));
     getApi()?.save?.();
     refreshInfo();
   }
