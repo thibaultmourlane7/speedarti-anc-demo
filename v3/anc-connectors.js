@@ -75,6 +75,7 @@
       latitude:f.geometry?.coordinates?.[1],
       geometry:f.geometry || null,
       properties:f.properties || {},
+      surfaceM2:index==='parcel'?Number(f.properties?.contenance ?? f.properties?.CONTENANCE ?? f.properties?.surface ?? f.properties?.area ?? '')||undefined:undefined,
       source:index==='parcel'?'Géoplateforme IGN / Parcellaire Express':'Géoplateforme IGN / BAN',
       retrievedAt:new Date().toISOString()
     }));
