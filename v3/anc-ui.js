@@ -317,14 +317,96 @@
     return `<div class="anc-layer-row"><input type="checkbox" class="anc-layer-visible" data-layer="${esc(l.id)}" ${l.visible?'checked':''}><label>${esc(l.label)}<br><small>${esc(l.sourceScale||'')}</small></label><input class="anc-layer-opacity" data-layer="${esc(l.id)}" type="range" min="0" max="100" value="${Math.round((Number(l.opacity)||0)*100)}"></div>`;
   }
 
+  function mapsConnectionKey(s) {
+    const lat=num(s.parcel?.lat),lng=num(s.parcel?.lng);
+    const scales=(s.maps||[]).map(m=>`${m.kind}:${m.scale}`).join('|');
+    return [lat??'',lng??'',scales].join('::');
+  }
+
+  function connectStudyMaps(s) {
+    const lat=num(s.parcel?.lat),lng=num(s.parcel?.lng);
+    if(lat===undefined||lng===undefined)return false;
+    connectors()?.connectAllStudyMaps?.({
+      maps:s.maps,
+      latitude:lat,
+      longitude:lng,
+      printWidthMm:178
+    });
+    s.mapsConnectionKey=mapsConnectionKey(s);
+    s.mapsConnectedAt=new Date().toISOString();
+    api()?.save?.();
+    return true;
+  }
+
+  function mapPresetButtons(s) {
+    const labels={
+      location:'Situation',cadastral:'Cadastre',aerial:'Vue aérienne',flood:'Inondation',
+      groundwater:'Remontée nappe',environment:'Contraintes',geology:'Géologie',
+      investigation:'Sondages / Porchet',layout:'Implantation ANC',trenches:'Tranchées'
+    };
+    return (s.maps||[]).map(m=>`<button class="btn ghost small anc-map-preset" type="button" data-kind="${esc(m.kind)}">${esc(labels[m.kind]||m.title)}</button>`).join('');
+  }
+
   function enhanceMaps() {
     const section=document.getElementById('cartes');
     const s=state();
     if(!section||!s||document.getElementById('anc-v3-live-map'))return;
+
+    const lat=num(s.parcel?.lat),lng=num(s.parcel?.lng);
+    if(lat!==undefined&&lng!==undefined && s.mapsConnectionKey!==mapsConnectionKey(s)){
+      connectStudyMaps(s);
+      setTimeout(()=>api()?.render?.(),0);
+      return;
+    }
+
     const layers=(s.mapLayers||[]).filter(l=>l.id!=='anc-objects');
     const scale=s.mapView?.exportScale||500;
-    const body=`<div class="anc-map-grid"><div><div id="anc-v3-map"></div></div><aside><div class="field"><label>Objet à dessiner</label><select id="anc-map-role" class="select"><option value="house">Bâtiment</option><option value="treatment">Filière ANC</option><option value="pipe">Canalisation</option><option value="borehole">Sondage</option><option value="porchet">Test Porchet</option><option value="well">Puits / captage</option><option value="outlet">Exutoire / fossé</option><option value="exclusion">Zone d’exclusion</option><option value="access">Accès</option><option value="tree">Arbre / végétation</option><option value="annotation">Annotation</option></select></div><div class="field" style="margin-top:10px"><label>Échelle du plan / export</label><select id="anc-map-scale" class="select">${[100,200,250,500,1000].map(x=>`<option value="${x}" ${Number(scale)===x?'selected':''}>1:${x}</option>`).join('')}</select></div><h3>Calques et intensité</h3>${layers.map(layerRow).join('')}<div class="notice warn" style="margin-top:12px"><b>BRGM :</b> source géologique 1:50 000. Zoomer ou exporter le plan au 1:500 ne transforme jamais la précision de cette source.</div></aside></div>`;
-    section.insertAdjacentHTML('afterbegin',card('anc-v3-live-map','Carte de travail multicouche','Orthophoto réelle, cadastre, BRGM, dessin vectoriel et métrés. Échelle et Nord restent visibles.',body));
+    const connected=(s.maps||[]).filter(m=>m.liveConnected).length;
+    const body=`
+      <div class="notice good" style="margin-bottom:12px">
+        <b>Cartes connectées : ${connected}/${(s.maps||[]).length}</b>
+        ${lat!==undefined&&lng!==undefined
+          ?` — centre commun ${lat.toFixed(6)} / ${lng.toFixed(6)}`
+          :' — localisez d’abord le chantier pour charger les sources officielles.'}
+      </div>
+      <div class="anc-v3-toolbar" style="margin-bottom:12px">
+        <button class="btn primary" type="button" id="anc-connect-all-maps">🔌 Actualiser toutes les cartes</button>
+        ${mapPresetButtons(s)}
+      </div>
+      <div class="anc-map-grid">
+        <div><div id="anc-v3-map"></div></div>
+        <aside>
+          <div class="field"><label>Objet à dessiner</label><select id="anc-map-role" class="select">
+            <option value="house">Bâtiment</option><option value="treatment">Filière ANC</option><option value="pipe">Canalisation</option>
+            <option value="borehole">Sondage</option><option value="porchet">Test Porchet</option><option value="well">Puits / captage</option>
+            <option value="outlet">Exutoire / fossé</option><option value="exclusion">Zone d’exclusion</option><option value="access">Accès</option>
+            <option value="tree">Arbre / végétation</option><option value="annotation">Annotation</option>
+          </select></div>
+          <div class="field" style="margin-top:10px"><label>Échelle du plan / export</label><select id="anc-map-scale" class="select">
+            ${[100,200,250,500,1000].map(x=>`<option value="${x}" ${Number(scale)===x?'selected':''}>1:${x}</option>`).join('')}
+          </select></div>
+          <h3>Calques et intensité</h3>
+          ${layers.map(layerRow).join('')}
+          <div class="notice warn" style="margin-top:12px"><b>BRGM :</b> la carte géologique conserve son échelle source 1:50 000. Zoomer ou exporter le plan au 1:500 ne change pas sa précision.</div>
+        </aside>
+      </div>`;
+    section.insertAdjacentHTML('afterbegin',card('anc-v3-live-map','Carte de travail multicouche','Toutes les cartes du dossier utilisent maintenant les sources officielles et le même centre géographique.',body));
+
+    document.getElementById('anc-connect-all-maps')?.addEventListener('click',e=>{
+      if(!connectStudyMaps(s)){alert('Localisez d’abord le chantier depuis son adresse ou le GPS mobile.');return}
+      const b=e.currentTarget;b.textContent='✓ Cartes actualisées';
+      setTimeout(()=>api()?.render?.(),250);
+    });
+
+    document.querySelectorAll('.anc-map-preset').forEach(el=>el.addEventListener('click',e=>{
+      const kind=e.currentTarget.dataset.kind;
+      window.ANCV3Map?.applyPreset?.(kind);
+      const item=(s.maps||[]).find(m=>m.kind===kind);
+      if(kind==='flood' && item?.connection?.externalUrl){
+        const open=confirm('La carte interactive affiche la localisation et le statut Géorisques. Ouvrir aussi le rapport officiel Géorisques dans un nouvel onglet ?');
+        if(open)window.open(item.connection.externalUrl,'_blank','noopener');
+      }
+    }));
 
     document.querySelectorAll('.anc-layer-visible').forEach(el=>el.addEventListener('change',e=>{
       const id=e.target.dataset.layer;const cfg=s.mapLayers.find(x=>x.id===id);if(cfg)cfg.visible=e.target.checked;
