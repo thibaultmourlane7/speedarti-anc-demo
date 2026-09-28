@@ -206,6 +206,57 @@
     state.mapFeatures = state.mapFeatures.filter(x=>x.id!==id);
   }
 
+  function geometryRepresentativePoint(feature) {
+    const g=feature?.geometry;
+    if(!g)return null;
+    if(g.type==='Point' && Array.isArray(g.coordinates))return g.coordinates.slice(0,2);
+    let coords=[];
+    if(g.type==='LineString')coords=g.coordinates||[];
+    if(g.type==='Polygon')coords=g.coordinates?.[0]||[];
+    if(!coords.length)return null;
+    const valid=coords.filter(c=>Array.isArray(c)&&Number.isFinite(Number(c[0]))&&Number.isFinite(Number(c[1])));
+    if(!valid.length)return null;
+    return [
+      valid.reduce((a,c)=>a+Number(c[0]),0)/valid.length,
+      valid.reduce((a,c)=>a+Number(c[1]),0)/valid.length
+    ];
+  }
+
+  function haversineM(a,b) {
+    if(!a||!b)return undefined;
+    const [lon1,lat1]=a.map(Number),[lon2,lat2]=b.map(Number);
+    if(![lon1,lat1,lon2,lat2].every(Number.isFinite))return undefined;
+    const R=6371008.8,toRad=x=>x*Math.PI/180;
+    const dLat=toRad(lat2-lat1),dLon=toRad(lon2-lon1);
+    const q=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+    return 2*R*Math.asin(Math.min(1,Math.sqrt(q)));
+  }
+
+  function mapMetricSummary(state) {
+    ensureV3(state);
+    const features=state.mapFeatures||[];
+    const byRole=role=>features.find(f=>f.role===role||f.properties?.role===role);
+    const point=role=>geometryRepresentativePoint(byRole(role));
+    const areaFor=role=>features.filter(f=>f.role===role||f.properties?.role===role)
+      .reduce((a,f)=>a+(n(f.properties?.areaM2)||0),0);
+    const lengthFor=role=>features.filter(f=>f.role===role||f.properties?.role===role)
+      .reduce((a,f)=>a+(n(f.properties?.lengthM)||n(f.properties?.perimeterM)||0),0);
+    const allArea=features.reduce((a,f)=>a+(n(f.properties?.areaM2)||0),0);
+    const allLength=features.reduce((a,f)=>a+(n(f.properties?.lengthM)||0),0);
+    const house=point('house'),treatment=point('treatment'),well=point('well'),outlet=point('outlet');
+    return {
+      featureCount:features.length,
+      totalDrawnAreaM2:allArea,
+      totalDrawnLengthM:allLength,
+      parcelAreaM2:areaFor('parcel')||undefined,
+      availableAreaM2:areaFor('available')||undefined,
+      pipeLengthM:lengthFor('pipe')||undefined,
+      houseToTreatmentM:haversineM(house,treatment),
+      treatmentToWellM:haversineM(treatment,well),
+      treatmentToOutletM:haversineM(treatment,outlet)
+    };
+  }
+
   function finalChecks(state) {
     ensureV3(state);
     const checks = [];
@@ -259,6 +310,9 @@
     addFeature,
     updateFeature,
     removeFeature,
-    finalChecks
+    finalChecks,
+    mapMetricSummary,
+    haversineM,
+    geometryRepresentativePoint
   };
 })();
