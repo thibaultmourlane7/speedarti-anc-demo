@@ -427,7 +427,7 @@
     const connected=!!m.liveConnected;
     const external=m.connection?.externalUrl||'';
     const sourceScale=m.sourceScale||m.connection?.sourceScale||'';
-    const frozen=!!m.preview;
+    const frozen=!!m.preview && !!m.snapshotAt;
     const frozenAt=m.snapshotAt?new Date(m.snapshotAt).toLocaleString('fr-FR'):'';
     const layerSummary=Array.isArray(m.snapshotLayers)&&m.snapshotLayers.length
       ?m.snapshotLayers.map(x=>x.label||x.id).filter(Boolean).join(' + ')
