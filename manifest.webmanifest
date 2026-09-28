@@ -1,0 +1,12 @@
+{
+  "name": "SpeedArti ANC",
+  "short_name": "ANC",
+  "description": "Module autonome SpeedArti pour études d'assainissement non collectif.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f1f6fb",
+  "theme_color": "#0b6bcb",
+  "lang": "fr",
+  "orientation": "any"
+}
