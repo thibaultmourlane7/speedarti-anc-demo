@@ -105,6 +105,7 @@
       version:'1.3.0',
       opacity:opacity,
       attribution:attribution||label,
+      crossOrigin:'anonymous',
       maxZoom:21
     });
     layers.set(id,{id,label,layer});
@@ -273,6 +274,7 @@
     if(!map)return;
     clearRiskMarker();
     const state=getState();
+    if(state?.mapView)state.mapView.activeKind=kind;
     const presets={
       location:['ign-plan'],
       cadastral:['ign-plan','ign-cadastre'],
@@ -290,7 +292,70 @@
     const item=(state?.maps||[]).find(m=>m.kind===kind);
     const lat=Number(state?.parcel?.lat),lng=Number(state?.parcel?.lng);
     if(Number.isFinite(lat)&&Number.isFinite(lng))map.setView([lat,lng],zoomForScale(item?.scale||state?.mapView?.exportScale));
+    getApi()?.save?.();
     refreshInfo();
+  }
+
+  async function freezeCurrentMap(kindArg) {
+    const state=getState();
+    if(!state||!map)throw new Error('Carte non initialisée.');
+    const kind=kindArg||state.mapView?.activeKind||'layout';
+    const item=(state.maps||[]).find(m=>m.kind===kind);
+    if(!item)throw new Error('Carte du dossier introuvable.');
+    if(typeof window.html2canvas!=='function')throw new Error('Moteur de capture indisponible.');
+
+    map.invalidateSize();
+    await new Promise(resolve=>setTimeout(resolve,450));
+
+    const node=document.getElementById('anc-v3-map');
+    if(!node)throw new Error('Zone cartographique introuvable.');
+
+    let canvas;
+    try{
+      canvas=await window.html2canvas(node,{
+        useCORS:true,
+        allowTaint:false,
+        backgroundColor:'#ffffff',
+        scale:2,
+        logging:false
+      });
+    }catch(error){
+      throw new Error('Capture impossible : '+(error?.message||error));
+    }
+
+    const image=canvas.toDataURL('image/png',0.95);
+    const center=map.getCenter();
+    const visibleLayers=(state.mapLayers||[])
+      .filter(l=>l.id==='anc-objects'||l.visible)
+      .map(l=>({
+        id:l.id,label:l.label,opacity:Number(l.opacity??1),
+        sourceScale:l.sourceScale||'',provider:l.provider||''
+      }));
+
+    item.preview=image;
+    item.snapshotVersion=(Number(item.snapshotVersion)||0)+1;
+    item.snapshotAt=new Date().toISOString();
+    item.snapshotCenter={lat:center.lat,lng:center.lng};
+    item.snapshotZoom=map.getZoom();
+    item.snapshotLayers=visibleLayers;
+    item.snapshotSourceSummary=visibleLayers.map(l=>l.label).join(' + ');
+    item.north=true;
+    item.scaleBar=true;
+    item.scaleVerified=false;
+    item.sourceDate=new Date().toISOString().slice(0,10);
+    item.liveConnected=true;
+
+    getApi()?.save?.();
+    return {
+      kind,
+      version:item.snapshotVersion,
+      at:item.snapshotAt,
+      image
+    };
+  }
+
+  function activeKind() {
+    return getState()?.mapView?.activeKind||'layout';
   }
 
   function setLayerVisible(id,visible) {
@@ -341,6 +406,8 @@
     centerOnStudy,
     syncDrawnToState,
     applyPreset,
+    freezeCurrentMap,
+    activeKind,
     registerOfficialLayers,
     groundWidthM
   };
