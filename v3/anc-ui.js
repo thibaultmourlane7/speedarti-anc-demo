@@ -91,6 +91,7 @@
             communeCode:f.cityCode||'',
             section:f.section||'',
             number:String(f.number||''),
+            surfaceM2:f.surfaceM2??'',
             geometry:f.geometry||null,
             source:f.source,
             retrievedAt:f.retrievedAt,
