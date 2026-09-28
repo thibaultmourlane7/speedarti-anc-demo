@@ -161,7 +161,8 @@
     const el=document.getElementById('anc-map-live-info');
     const state=getState();
     if(!el||!state) return;
-    const scale=Number(state.mapView?.exportScale)||500;
+    const active=(state.maps||[]).find(m=>m.kind===(state.mapView?.activeKind||'layout'));
+    const scale=Number(active?.scale||state.mapView?.exportScale)||500;
     const width=groundWidthM(scale, state.mapView?.printFormat==='A3'?380:260);
     let count=state.mapFeatures?.length||0;
     el.innerHTML=`<b>Plan ANC 1:${scale.toLocaleString('fr-FR')}</b><br>Largeur terrain cible ≈ ${width.toFixed(1)} m<br>${count} objet(s) éditable(s)<br><small>L'échelle source BRGM reste 1:50 000.</small>`;
