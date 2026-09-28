@@ -5,6 +5,8 @@
   const GPF_WMS_RASTER = 'https://data.geopf.fr/wms-r/wms';
   const GPF_WFS = 'https://data.geopf.fr/wfs/ows';
   const BRGM_WMS = 'https://geoservices.brgm.fr/geologie';
+  const BRGM_RISKS_WMS = 'https://geoservices.brgm.fr/risques';
+  const GEORISQUES_REPORT = 'https://www.georisques.gouv.fr/api/v1/rapport_pdf';
   const OPEN_METEO = 'https://api.open-meteo.com/v1/forecast';
   const OPEN_METEO_ARCHIVE = 'https://archive-api.open-meteo.com/v1/archive';
 
@@ -360,6 +362,156 @@
     };
   }
 
+  function webMercator({latitude,longitude}) {
+    const x=Number(longitude)*20037508.34/180;
+    let y=Math.log(Math.tan((90+Number(latitude))*Math.PI/360))/(Math.PI/180);
+    y=y*20037508.34/180;
+    return {x,y};
+  }
+
+  function wmsStaticMapUrl({url:serviceUrl,layers,latitude,longitude,scale=500,width=1200,height=800,printWidthMm=178,format='image/png',transparent=false,styles=''}) {
+    const lat=Number(latitude),lon=Number(longitude);
+    if(!Number.isFinite(lat)||!Number.isFinite(lon))return '';
+    const center=webMercator({latitude:lat,longitude:lon});
+    const groundWidthM=Math.max(20,(Number(scale)||500)*(Number(printWidthMm)||178)/1000);
+    const groundHeightM=groundWidthM*(Number(height)||800)/(Number(width)||1200);
+    const minX=center.x-groundWidthM/2,maxX=center.x+groundWidthM/2;
+    const minY=center.y-groundHeightM/2,maxY=center.y+groundHeightM/2;
+    return url(serviceUrl,{
+      SERVICE:'WMS',VERSION:'1.3.0',REQUEST:'GetMap',
+      LAYERS:layers,STYLES:styles,FORMAT:format,
+      TRANSPARENT:transparent?'TRUE':'FALSE',
+      CRS:'EPSG:3857',
+      BBOX:`${minX},${minY},${maxX},${maxY}`,
+      WIDTH:width,HEIGHT:height
+    });
+  }
+
+  function georisquesReportUrl({latitude,longitude}) {
+    const lat=Number(latitude),lon=Number(longitude);
+    if(!Number.isFinite(lat)||!Number.isFinite(lon))return '';
+    return url(GEORISQUES_REPORT,{latlon:`${lon},${lat}`});
+  }
+
+  function mapSourceRegistry() {
+    return {
+      location:{
+        id:'location',label:'Carte de situation',mode:'wms',
+        provider:'IGN / cartes.gouv.fr',url:GPF_WMS_RASTER,layers:'GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2',
+        source:'Plan IGN v2 — Géoplateforme',sourceScale:'multi-échelles',defaultScale:25000,opacity:1
+      },
+      cadastral:{
+        id:'cadastral',label:'Plan cadastral',mode:'wms',
+        provider:'IGN / cartes.gouv.fr',url:GPF_WMS_RASTER,layers:'CADASTRALPARCELS.PARCELLAIRE_EXPRESS',
+        source:'Parcellaire Express PCI — Géoplateforme',sourceScale:'PCI',defaultScale:2000,opacity:1,transparent:true
+      },
+      aerial:{
+        id:'aerial',label:'Orthophoto',mode:'wms',
+        provider:'IGN / cartes.gouv.fr',url:GPF_WMS_RASTER,layers:'ORTHOIMAGERY.ORTHOPHOTOS',
+        source:'Photographies aériennes IGN — Géoplateforme',sourceScale:'orthophoto',defaultScale:500,opacity:1
+      },
+      flood:{
+        id:'flood',label:'Risque d’inondation',mode:'georisques',
+        provider:'Géorisques',source:'Géorisques — rapport de risques et carte officielle au point',
+        sourceScale:'variable selon donnée disponible',defaultScale:5000
+      },
+      groundwater:{
+        id:'groundwater',label:'Remontée de nappe',mode:'wms',
+        provider:'BRGM / Géorisques',url:BRGM_RISKS_WMS,layers:'REM_NAPPE_SEDIM,REM_NAPPE_SOCLE',
+        source:'BRGM / Géorisques — remontées de nappes',sourceScale:'donnée nationale',defaultScale:5000,opacity:0.65,transparent:true
+      },
+      environment:{
+        id:'environment',label:'Contraintes environnementales',mode:'wms-group',
+        provider:'BRGM / Géorisques',
+        source:'BRGM / Géorisques — aléas et contraintes géoscientifiques',
+        sourceScale:'variable selon couche',defaultScale:5000,
+        children:[
+          {id:'clay',label:'Retrait-gonflement des argiles',url:BRGM_RISKS_WMS,layers:'ALEARG',opacity:0.50,sourceScale:'variable'},
+          {id:'cavities',label:'Cavités souterraines',url:BRGM_RISKS_WMS,layers:'CAVITE_LOCALISEE',opacity:0.80,sourceScale:'ponctuel'},
+          {id:'landslides',label:'Mouvements de terrain',url:BRGM_RISKS_WMS,layers:'MVT_LOCALISE',opacity:0.80,sourceScale:'ponctuel'}
+        ]
+      },
+      geology:{
+        id:'geology',label:'Carte géologique',mode:'wms',
+        provider:'BRGM / InfoTerre',url:BRGM_WMS,layers:'SCAN_D_GEOL50',
+        source:'BRGM / InfoTerre — carte géologique papier',sourceScale:'1:50 000',defaultScale:25000,opacity:0.60
+      },
+      investigation:{
+        id:'investigation',label:'Sondages et Porchet',mode:'composite',
+        provider:'SpeedArti + IGN',source:'Orthophoto IGN + cadastre + objets ANC',sourceScale:'plan métrique',defaultScale:400,
+        baseLayers:['aerial','cadastral'],vectorLayer:'anc-objects'
+      },
+      layout:{
+        id:'layout',label:'Implantation ANC',mode:'composite',
+        provider:'SpeedArti + IGN',source:'Orthophoto IGN + cadastre + objets ANC',sourceScale:'plan métrique',defaultScale:400,
+        baseLayers:['aerial','cadastral'],vectorLayer:'anc-objects'
+      },
+      trenches:{
+        id:'trenches',label:'Tranchées d’infiltration',mode:'composite',
+        provider:'SpeedArti + IGN',source:'Plan technique SpeedArti + orthophoto IGN + cadastre',sourceScale:'plan métrique',defaultScale:200,
+        baseLayers:['aerial','cadastral'],vectorLayer:'anc-objects'
+      }
+    };
+  }
+
+  function connectedMapDescriptor(kind,{latitude,longitude,scale,printWidthMm=178}={}) {
+    const registry=mapSourceRegistry();
+    const src=registry[kind];
+    if(!src)return null;
+    const effectiveScale=Number(scale)||src.defaultScale||500;
+    const base={
+      kind,provider:src.provider,source:src.source,sourceScale:src.sourceScale,
+      scale:effectiveScale,connectedAt:new Date().toISOString(),mode:src.mode
+    };
+    if(src.mode==='wms'){
+      base.imageUrl=wmsStaticMapUrl({
+        url:src.url,layers:src.layers,latitude,longitude,scale:effectiveScale,
+        printWidthMm,transparent:!!src.transparent
+      });
+      base.wms={url:src.url,layers:src.layers,opacity:src.opacity??1,transparent:!!src.transparent};
+    }else if(src.mode==='georisques'){
+      base.externalUrl=georisquesReportUrl({latitude,longitude});
+      const plan=registry.location;
+      base.imageUrl=wmsStaticMapUrl({
+        url:plan.url,layers:plan.layers,latitude,longitude,scale:effectiveScale,printWidthMm
+      });
+      base.note='Le fond cartographique est IGN ; le zonage inondation détaillé est fourni par le rapport officiel Géorisques au point.';
+    }else if(src.mode==='wms-group'){
+      base.children=src.children||[];
+      const plan=registry.location;
+      base.imageUrl=wmsStaticMapUrl({
+        url:plan.url,layers:plan.layers,latitude,longitude,scale:effectiveScale,printWidthMm
+      });
+      base.note='Carte interactive : superposition des couches BRGM/Géorisques sur fond IGN.';
+    }else if(src.mode==='composite'){
+      base.baseLayers=src.baseLayers||['aerial','cadastral'];
+      const aerial=registry.aerial;
+      base.imageUrl=wmsStaticMapUrl({
+        url:aerial.url,layers:aerial.layers,latitude,longitude,scale:effectiveScale,printWidthMm
+      });
+      base.note='Fond orthophoto connecté ; objets ANC et cadastre superposés dans l’éditeur interactif.';
+    }
+    return base;
+  }
+
+  function connectAllStudyMaps({maps,latitude,longitude,printWidthMm=178}) {
+    if(!Array.isArray(maps))return [];
+    return maps.map(m=>{
+      const d=connectedMapDescriptor(m.kind,{
+        latitude,longitude,scale:m.scale,printWidthMm:m.printWidthMm||printWidthMm
+      });
+      if(!d)return m;
+      m.connection=d;
+      m.liveConnected=!!(d.imageUrl||d.externalUrl||d.children||d.baseLayers);
+      m.liveConnectedAt=d.connectedAt;
+      m.source=d.source||m.source;
+      m.sourceDate=new Date().toISOString().slice(0,10);
+      m.sourceScale=d.sourceScale||m.sourceScale||'';
+      if(d.imageUrl && !m.preview)m.background=d.imageUrl;
+      return m;
+    });
+  }
+
   function officialSourceRegistry() {
     return {
       geoplateforme:{
@@ -392,6 +544,11 @@
     georisquesConnectorInfo,
     georisquesRiskReport,
     extractGeorisquesRisks,
+    mapSourceRegistry,
+    connectedMapDescriptor,
+    connectAllStudyMaps,
+    wmsStaticMapUrl,
+    georisquesReportUrl,
     officialSourceRegistry
   };
 })();
