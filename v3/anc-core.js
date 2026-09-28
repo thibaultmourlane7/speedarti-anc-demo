@@ -65,13 +65,26 @@
       environment: { status: STATUS.TO_CONFIRM, provider: '', retrievedAt: '', data: null, warning: '' }
     }, state.externalData || {});
 
-    state.mapLayers = Array.isArray(state.mapLayers) && state.mapLayers.length ? state.mapLayers : [
+    const defaultMapLayers = [
       { id:'ign-plan', label:'Plan IGN', provider:'Géoplateforme IGN', type:'wms', visible:false, opacity:0.70, sourceScale:'multi-échelles', order:10 },
       { id:'ign-ortho', label:'Photographies aériennes', provider:'Géoplateforme IGN', type:'wms', visible:true, opacity:1, sourceScale:'orthophoto', order:20 },
       { id:'ign-cadastre', label:'Parcelles cadastrales', provider:'Géoplateforme IGN', type:'wms', visible:true, opacity:0.72, sourceScale:'PCI', order:30 },
       { id:'brgm-geology', label:'Carte géologique BRGM', provider:'BRGM / InfoTerre', type:'wms', visible:false, opacity:0.55, sourceScale:'1:50 000', order:40 },
+      { id:'brgm-groundwater-sedim', label:'Remontée de nappe — domaine sédimentaire', provider:'BRGM / Géorisques', type:'wms', visible:false, opacity:0.55, sourceScale:'donnée nationale', order:50 },
+      { id:'brgm-groundwater-socle', label:'Remontée de nappe — domaine de socle', provider:'BRGM / Géorisques', type:'wms', visible:false, opacity:0.55, sourceScale:'donnée nationale', order:51 },
+      { id:'brgm-clay', label:'Retrait-gonflement des argiles', provider:'BRGM / Géorisques', type:'wms', visible:false, opacity:0.50, sourceScale:'variable', order:60 },
+      { id:'brgm-cavities', label:'Cavités souterraines', provider:'BRGM / Géorisques', type:'wms', visible:false, opacity:0.85, sourceScale:'ponctuel', order:61 },
+      { id:'brgm-landslides', label:'Mouvements de terrain', provider:'BRGM / Géorisques', type:'wms', visible:false, opacity:0.85, sourceScale:'ponctuel', order:62 },
       { id:'anc-objects', label:'Objets ANC', provider:'SpeedArti ANC', type:'vector', visible:true, opacity:1, sourceScale:'métrique', order:100 }
     ];
+    if (!Array.isArray(state.mapLayers) || !state.mapLayers.length) state.mapLayers = defaultMapLayers;
+    else {
+      const current = new Map(state.mapLayers.map(x=>[x.id,x]));
+      defaultMapLayers.forEach(def=>{
+        if(!current.has(def.id)) state.mapLayers.push(def);
+      });
+      state.mapLayers.sort((a,b)=>(a.order||0)-(b.order||0));
+    }
 
     state.mapFeatures = Array.isArray(state.mapFeatures) ? state.mapFeatures : [];
     state.mapView = Object.assign({
