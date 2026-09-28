@@ -238,6 +238,9 @@
         if(s.parcel){
           s.parcel.geology=parts.join(' · ') || 'BRGM interrogé — données détaillées à confirmer';
           s.parcel.geologySource='BRGM / InfoTerre — carte géologique source 1:50 000';
+          if(cat.sheetCode)s.parcel.geologyCode=cat.sheetCode;
+          if(cat.noticeRef)s.parcel.geologyNotice=cat.noticeRef;
+          if(cat.summary)s.parcel.geologyText=cat.summary;
         }
         commit();
       }catch(err){
