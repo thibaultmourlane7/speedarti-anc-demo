@@ -80,6 +80,41 @@ La démo utilise un `WeatherConnector` avec Open-Meteo comme provider technique 
 
 Le connecteur est volontairement abstrait afin de pouvoir utiliser Météo-France ou un autre provider validé lors de l'intégration SpeedArti.
 
+## Plan d’implantation ANC & calcul métrique
+
+La V3 utilise désormais **un seul éditeur cartographique principal** pour l’implantation ANC et les calculs métriques.
+
+Dans l’onglet **Plan & métrés**, Fred dispose au même endroit de :
+- toutes les cartes et couches officielles connectées ;
+- l’orthophoto ;
+- le cadastre ;
+- la géologie BRGM ;
+- les risques BRGM / Géorisques ;
+- les vues Sondages / Porchet ;
+- l’implantation ANC ;
+- le dessin vectoriel ;
+- les surfaces, longueurs et distances calculées à partir des objets dessinés ;
+- l’échelle et le Nord.
+
+L’onglet **Cartes dossier** n’est plus un second éditeur. Il sert de bibliothèque des images figées destinées au dossier et au rapport.
+
+### Carte live et image figée
+
+Chaque carte possède deux états distincts :
+
+1. **carte live** : toujours modifiable ;
+2. **image figée** : instantané enregistré dans le dossier.
+
+Fred peut :
+- dessiner / modifier ;
+- cliquer sur **Figer l’image dans le dossier** ;
+- continuer à modifier la carte live ;
+- cliquer ensuite sur **Mettre à jour l’image figée**.
+
+La mise à jour remplace l’image active de la carte et incrémente sa version de capture. La carte live n’est jamais verrouillée par le figement.
+
+Les anciennes prévisualisations techniques ne sont pas considérées comme des images figées tant qu’une vraie capture n’a pas été réalisée.
+
 ## Échelle et cartographie
 
 Deux logiques sont volontairement séparées :
