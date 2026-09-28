@@ -93,8 +93,20 @@
       northAlwaysVisible: true,
       scaleAlwaysVisible: true,
       printFormat: 'A4',
-      orientation: 'landscape'
+      orientation: 'landscape',
+      activeKind: 'layout'
     }, state.mapView || {});
+
+    if (Array.isArray(state.maps)) {
+      state.maps.forEach(m=>{
+        if(!Object.prototype.hasOwnProperty.call(m,'snapshotVersion')) m.snapshotVersion = m.preview ? 1 : 0;
+        if(!Object.prototype.hasOwnProperty.call(m,'snapshotAt')) m.snapshotAt = '';
+        if(!Object.prototype.hasOwnProperty.call(m,'snapshotCenter')) m.snapshotCenter = null;
+        if(!Object.prototype.hasOwnProperty.call(m,'snapshotZoom')) m.snapshotZoom = null;
+        if(!Object.prototype.hasOwnProperty.call(m,'snapshotLayers')) m.snapshotLayers = [];
+        if(!Object.prototype.hasOwnProperty.call(m,'snapshotSourceSummary')) m.snapshotSourceSummary = '';
+      });
+    }
 
     state.knowledgeBase = Object.assign({
       domain: 'anc',
