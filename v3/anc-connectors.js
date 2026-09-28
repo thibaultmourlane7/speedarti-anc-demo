@@ -104,32 +104,76 @@
     return diff > 5 ? 'historical' : 'forecast';
   }
 
+  function isoDay(d){return new Date(d).toISOString().slice(0,10)}
+  function addDaysIso(dateString,days){
+    const d=new Date((dateString||isoDay(new Date()))+'T12:00:00');
+    d.setDate(d.getDate()+days);
+    return isoDay(d);
+  }
+
   async function weatherForVisit({latitude, longitude, date}) {
     if (latitude === undefined || longitude === undefined) throw new Error('Coordonnées manquantes.');
-    const mode = weatherDateMode(date);
-    const base = mode === 'historical' ? OPEN_METEO_ARCHIVE : OPEN_METEO;
-    const params = {
-      latitude, longitude,
-      timezone:'Europe/Paris',
-      hourly:'temperature_2m,precipitation,weather_code,wind_speed_10m',
-      daily:'precipitation_sum,temperature_2m_max,temperature_2m_min,wind_speed_10m_max',
-      start_date: date || undefined,
-      end_date: date || undefined
-    };
-    if (mode === 'forecast' && !date) {
-      delete params.start_date; delete params.end_date;
-      params.forecast_days = 7;
+    const targetDate=date || isoDay(new Date());
+    const mode = weatherDateMode(targetDate);
+    let data;
+
+    if(mode==='historical'){
+      data=await json(url(OPEN_METEO_ARCHIVE,{
+        latitude,longitude,timezone:'Europe/Paris',
+        daily:'precipitation_sum,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,weather_code',
+        start_date:addDaysIso(targetDate,-7),
+        end_date:targetDate
+      }),{timeout:15000});
+    }else{
+      data=await json(url(OPEN_METEO,{
+        latitude,longitude,timezone:'Europe/Paris',
+        daily:'precipitation_sum,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,weather_code',
+        past_days:7,forecast_days:16
+      }),{timeout:15000});
     }
-    const data = await json(url(base,params),{timeout:15000});
+
+    const times=data.daily?.time||[];
+    let idx=times.indexOf(targetDate);
+    if(idx<0){
+      const today=isoDay(new Date());
+      idx=times.indexOf(today);
+      if(idx<0)idx=Math.max(0,times.length-1);
+    }
+
+    const selected={
+      date:times[idx]||targetDate,
+      temperatureMinC:data.daily?.temperature_2m_min?.[idx],
+      temperatureMaxC:data.daily?.temperature_2m_max?.[idx],
+      precipitationMm:data.daily?.precipitation_sum?.[idx],
+      windMaxKmh:data.daily?.wind_speed_10m_max?.[idx],
+      weatherCode:data.daily?.weather_code?.[idx]
+    };
+
+    const targetTs=new Date(targetDate+'T12:00:00').getTime();
+    const trendIndexes=times.map((t,i)=>({t,i,ts:new Date(t+'T12:00:00').getTime()}))
+      .filter(x=>x.ts<targetTs && x.ts>=targetTs-7*86400000)
+      .map(x=>x.i);
+    const trend=trendIndexes.length?trendIndexes:times.slice(Math.max(0,idx-7),idx).map((_,j)=>Math.max(0,idx-7)+j);
+    const precip=trend.map(i=>Number(data.daily?.precipitation_sum?.[i])).filter(Number.isFinite);
+    const mins=trend.map(i=>Number(data.daily?.temperature_2m_min?.[i])).filter(Number.isFinite);
+    const maxs=trend.map(i=>Number(data.daily?.temperature_2m_max?.[i])).filter(Number.isFinite);
+    const totalRain=precip.reduce((a,b)=>a+b,0);
+    const wetDays=precip.filter(x=>x>=0.2).length;
+    const avg=(arr)=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:undefined;
+    const avgMin=avg(mins),avgMax=avg(maxs);
+    const trend7Text=trend.length
+      ? `J-7 : ${totalRain.toFixed(1)} mm de pluie cumulée, ${wetDays} jour(s) avec pluie${avgMin!==undefined&&avgMax!==undefined?`, températures moyennes min/max ${avgMin.toFixed(1)} / ${avgMax.toFixed(1)} °C`:''}`
+      : 'Tendance J-7 indisponible pour cette date.';
+
     return {
       provider:'Open-Meteo — provider de démonstration remplaçable par Météo-France',
       mode,
       retrievedAt:new Date().toISOString(),
-      date: date || data.daily?.time?.[0] || '',
-      temperatureMinC:data.daily?.temperature_2m_min?.[0],
-      temperatureMaxC:data.daily?.temperature_2m_max?.[0],
-      precipitationMm:data.daily?.precipitation_sum?.[0],
-      windMaxKmh:data.daily?.wind_speed_10m_max?.[0],
+      ...selected,
+      trend7Days:trend.length,
+      trendRainMm:totalRain,
+      trendWetDays:wetDays,
+      trend7Text,
       raw:data
     };
   }
