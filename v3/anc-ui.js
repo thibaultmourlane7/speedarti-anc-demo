@@ -151,15 +151,54 @@
       }
     });
 
-    document.getElementById('anc-env-prepare')?.addEventListener('click',()=>{
-      s.externalData.environment={
-        status:'TO_CONFIRM',
-        provider:'BRGM + Géorisques + urbanisme + environnement',
-        retrievedAt:new Date().toISOString(),
-        data:{georisques:connectors()?.georisquesConnectorInfo?.(),brgm:connectors()?.brgmLayers?.()},
-        warning:'Les données doivent être réellement interrogées et validées avant conclusion.'
-      };
-      s.dataStatus.environment='TO_CONFIRM';commit();
+    document.getElementById('anc-env-prepare')?.addEventListener('click',async e=>{
+      const lat=num(s.parcel?.lat),lng=num(s.parcel?.lng);
+      if(lat===undefined||lng===undefined){alert('Localisez d’abord le chantier.');return}
+      const b=e.currentTarget;b.disabled=true;b.textContent='Analyse automatique…';
+      try{
+        const report=await connectors()?.georisquesRiskReport?.({latitude:lat,longitude:lng,rayon:1000});
+        const risks=report?.risks||[];
+        const stamp=new Date().toISOString().slice(0,10);
+        const apply=(regex,key)=>{
+          const hit=risks.find(r=>regex.test(String(r.label||'')+' '+String(r.key||'')));
+          if(!hit||!s.constraints?.[key])return false;
+          s.constraints[key].value=hit.present?'yes':'no';
+          s.constraints[key].details=hit.statutAdresse||hit.statutCommune||hit.specifique||hit.label;
+          s.constraints[key].source='Géorisques API v1 — détection automatique à confirmer';
+          s.constraints[key].date=stamp;
+          return true;
+        };
+        const mapped=[
+          apply(/inond|submers/i,'flood'),
+          apply(/remont.{0,12}nappe|nappe/i,'groundwater')
+        ].filter(Boolean).length;
+        const present=risks.filter(r=>r.present).map(r=>r.label).filter(Boolean);
+        if(present.length){
+          const summary='Géorisques détectés : '+present.join(' ; ');
+          s.constraints.other=[s.constraints.other,summary].filter(Boolean).join('\n');
+        }
+        s.externalData.environment={
+          status:risks.length?'AUTO_DETECTED':'TO_CONFIRM',
+          provider:'Géorisques API v1 + BRGM',
+          retrievedAt:report?.retrievedAt||new Date().toISOString(),
+          data:{georisques:report,brgm:connectors()?.brgmLayers?.()},
+          warning:risks.length?'Résultats automatiques à confirmer par Fred.':'Réponse reçue sans détail exploitable : vérification manuelle requise.'
+        };
+        s.dataStatus.environment=risks.length?'AUTO_DETECTED':'TO_CONFIRM';
+        commit();
+      }catch(err){
+        s.externalData.environment={
+          status:'UNAVAILABLE',
+          provider:'Géorisques',
+          retrievedAt:new Date().toISOString(),
+          data:null,
+          warning:err.message
+        };
+        s.dataStatus.environment='UNAVAILABLE';
+        commit();
+      }finally{
+        b.disabled=false;b.textContent='Analyser automatiquement';
+      }
     });
 
     document.getElementById('anc-georisques-report')?.addEventListener('click',()=>{
