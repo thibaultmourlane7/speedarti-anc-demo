@@ -4,6 +4,7 @@
   let map = null;
   let drawn = null;
   const layers = new Map();
+  let riskMarker = null;
   let northControl = null;
   let infoControl = null;
 
@@ -95,12 +96,12 @@
     return out;
   }
 
-  function addWms(id,label,url,layerName,opacity,visible,attribution) {
+  function addWms(id,label,url,layerName,opacity,visible,attribution,transparent=true) {
     if(!map || !window.L) return;
     const layer=L.tileLayer.wms(url,{
       layers:layerName,
       format:'image/png',
-      transparent:true,
+      transparent:transparent!==false,
       version:'1.3.0',
       opacity:opacity,
       attribution:attribution||label,
@@ -108,6 +109,23 @@
     });
     layers.set(id,{id,label,layer});
     if(visible) layer.addTo(map);
+  }
+
+  function layerConfig(id) {
+    return getState()?.mapLayers?.find(l=>l.id===id) || {};
+  }
+
+  function registerOfficialLayers() {
+    const cfg=id=>layerConfig(id);
+    addWms('ign-plan','Plan IGN','https://data.geopf.fr/wms-r/wms','GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2',cfg('ign-plan').opacity??0.70,!!cfg('ign-plan').visible,'IGN — cartes.gouv.fr',false);
+    addWms('ign-ortho','Photographies aériennes','https://data.geopf.fr/wms-r/wms','ORTHOIMAGERY.ORTHOPHOTOS',cfg('ign-ortho').opacity??1,!!cfg('ign-ortho').visible,'IGN — Photographies aériennes',false);
+    addWms('ign-cadastre','Parcelles cadastrales','https://data.geopf.fr/wms-r/wms','CADASTRALPARCELS.PARCELLAIRE_EXPRESS',cfg('ign-cadastre').opacity??0.72,!!cfg('ign-cadastre').visible,'IGN — Parcellaire Express',true);
+    addWms('brgm-geology','Géologie BRGM 1:50 000','https://geoservices.brgm.fr/geologie','SCAN_D_GEOL50',cfg('brgm-geology').opacity??0.55,!!cfg('brgm-geology').visible,'BRGM / InfoTerre — 1:50 000',true);
+    addWms('brgm-groundwater-sedim','Remontée de nappe — sédimentaire','https://geoservices.brgm.fr/risques','REM_NAPPE_SEDIM',cfg('brgm-groundwater-sedim').opacity??0.55,!!cfg('brgm-groundwater-sedim').visible,'BRGM / Géorisques',true);
+    addWms('brgm-groundwater-socle','Remontée de nappe — socle','https://geoservices.brgm.fr/risques','REM_NAPPE_SOCLE',cfg('brgm-groundwater-socle').opacity??0.55,!!cfg('brgm-groundwater-socle').visible,'BRGM / Géorisques',true);
+    addWms('brgm-clay','Retrait-gonflement des argiles','https://geoservices.brgm.fr/risques','ALEARG',cfg('brgm-clay').opacity??0.50,!!cfg('brgm-clay').visible,'BRGM / Géorisques',true);
+    addWms('brgm-cavities','Cavités souterraines','https://geoservices.brgm.fr/risques','CAVITE_LOCALISEE',cfg('brgm-cavities').opacity??0.85,!!cfg('brgm-cavities').visible,'BRGM / Géorisques',true);
+    addWms('brgm-landslides','Mouvements de terrain','https://geoservices.brgm.fr/risques','MVT_LOCALISE',cfg('brgm-landslides').opacity??0.85,!!cfg('brgm-landslides').visible,'BRGM / Géorisques',true);
   }
 
   function addNorthControl() {
@@ -187,10 +205,7 @@
     const lng=Number(state.parcel?.lng)||1.35;
     map=L.map(el,{zoomControl:true,preferCanvas:true}).setView([lat,lng],19);
 
-    addWms('ign-ortho','Photographies aériennes','https://data.geopf.fr/wms-r/wms','ORTHOIMAGERY.ORTHOPHOTOS',1,true,'IGN — cartes.gouv.fr');
-    addWms('ign-plan','Plan IGN','https://data.geopf.fr/wms-r/wms','GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2',0.70,false,'IGN — cartes.gouv.fr');
-    addWms('ign-cadastre','Parcelles cadastrales','https://data.geopf.fr/wms-r/wms','CADASTRALPARCELS.PARCELLAIRE_EXPRESS',0.72,true,'IGN — Parcellaire Express');
-    addWms('brgm-geology','Géologie BRGM 1:50 000','https://geoservices.brgm.fr/geologie','SCAN_D_GEOL50',0.55,false,'BRGM / InfoTerre — source 1:50 000');
+    registerOfficialLayers();
 
     drawn=new L.FeatureGroup().addTo(map);
     (state.mapFeatures||[]).forEach(f=>{
@@ -206,6 +221,76 @@
 
     map.on('moveend zoomend',refreshInfo);
     return true;
+  }
+
+  function clearRiskMarker() {
+    if(riskMarker && map){try{map.removeLayer(riskMarker)}catch(_){}}
+    riskMarker=null;
+  }
+
+  function addFloodStatusMarker() {
+    clearRiskMarker();
+    const state=getState();
+    if(!map||!state||!window.L)return;
+    const lat=Number(state.parcel?.lat),lng=Number(state.parcel?.lng);
+    if(!Number.isFinite(lat)||!Number.isFinite(lng))return;
+    const c=state.constraints?.flood||{};
+    const status=c.value==='yes'?'Risque détecté':c.value==='no'?'Aucun risque détecté par la source interrogée':'Risque non confirmé';
+    const detail=[c.details,c.source].filter(Boolean).join(' — ');
+    riskMarker=L.circleMarker([lat,lng],{
+      radius:12,weight:4,fillOpacity:.35
+    }).bindPopup(`<b>Géorisques — inondation</b><br>${status}<br><small>${String(detail||'Interroger Géorisques pour mettre à jour cette information.')}</small>`);
+    riskMarker.addTo(map);
+  }
+
+  function setManyVisibility(visibleIds=[]) {
+    const allowed=new Set(visibleIds);
+    layers.forEach((entry,id)=>{
+      const visible=allowed.has(id);
+      if(visible && !map.hasLayer(entry.layer)) entry.layer.addTo(map);
+      if(!visible && map.hasLayer(entry.layer)) map.removeLayer(entry.layer);
+    });
+    const state=getState();
+    (state?.mapLayers||[]).forEach(cfg=>{
+      if(cfg.id==='anc-objects')return;
+      cfg.visible=allowed.has(cfg.id);
+    });
+    getApi()?.save?.();
+  }
+
+  function zoomForScale(scale) {
+    const s=Number(scale)||500;
+    if(s<=250)return 20;
+    if(s<=500)return 19;
+    if(s<=1000)return 18;
+    if(s<=2500)return 17;
+    if(s<=5000)return 15;
+    if(s<=10000)return 14;
+    return 12;
+  }
+
+  function applyPreset(kind) {
+    if(!map)return;
+    clearRiskMarker();
+    const state=getState();
+    const presets={
+      location:['ign-plan'],
+      cadastral:['ign-plan','ign-cadastre'],
+      aerial:['ign-ortho','ign-cadastre'],
+      flood:['ign-plan'],
+      groundwater:['ign-plan','brgm-groundwater-sedim','brgm-groundwater-socle'],
+      environment:['ign-plan','brgm-clay','brgm-cavities','brgm-landslides'],
+      geology:['ign-plan','brgm-geology'],
+      investigation:['ign-ortho','ign-cadastre'],
+      layout:['ign-ortho','ign-cadastre'],
+      trenches:['ign-ortho','ign-cadastre']
+    };
+    setManyVisibility(presets[kind]||['ign-ortho','ign-cadastre']);
+    if(kind==='flood')addFloodStatusMarker();
+    const item=(state?.maps||[]).find(m=>m.kind===kind);
+    const lat=Number(state?.parcel?.lat),lng=Number(state?.parcel?.lng);
+    if(Number.isFinite(lat)&&Number.isFinite(lng))map.setView([lat,lng],zoomForScale(item?.scale||state?.mapView?.exportScale));
+    refreshInfo();
   }
 
   function setLayerVisible(id,visible) {
@@ -255,6 +340,8 @@
     setExportScale,
     centerOnStudy,
     syncDrawnToState,
+    applyPreset,
+    registerOfficialLayers,
     groundWidthM
   };
 })();
