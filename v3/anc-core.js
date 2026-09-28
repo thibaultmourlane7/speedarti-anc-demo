@@ -99,7 +99,7 @@
 
     if (Array.isArray(state.maps)) {
       state.maps.forEach(m=>{
-        if(!Object.prototype.hasOwnProperty.call(m,'snapshotVersion')) m.snapshotVersion = m.preview ? 1 : 0;
+        if(!Object.prototype.hasOwnProperty.call(m,'snapshotVersion')) m.snapshotVersion = m.snapshotAt ? 1 : 0;
         if(!Object.prototype.hasOwnProperty.call(m,'snapshotAt')) m.snapshotAt = '';
         if(!Object.prototype.hasOwnProperty.call(m,'snapshotCenter')) m.snapshotCenter = null;
         if(!Object.prototype.hasOwnProperty.call(m,'snapshotZoom')) m.snapshotZoom = null;
@@ -287,7 +287,7 @@
     add('INFO','Porchet','Photos d’essai Porchet', porchets.length===0 || (state.photos||[]).some(p=>p.targetType==='porchet'), 'Caméra / Galerie / Fichier disponibles');
     const requiredMaps=(state.maps||[]).filter(m=>m.requirement==='mandatory');
     add('WARNING','Cartographie','Cartes obligatoires connectées', requiredMaps.length>0 && requiredMaps.every(m=>m.liveConnected===true), requiredMaps.length?`${requiredMaps.filter(m=>m.liveConnected).length}/${requiredMaps.length} connectée(s)`:'');
-    add('WARNING','Cartographie','Images figées des cartes obligatoires', requiredMaps.length>0 && requiredMaps.every(m=>!!m.preview), requiredMaps.length?`${requiredMaps.filter(m=>!!m.preview).length}/${requiredMaps.length} figée(s)`:'');
+    add('WARNING','Cartographie','Images figées des cartes obligatoires', requiredMaps.length>0 && requiredMaps.every(m=>!!m.preview&&!!m.snapshotAt), requiredMaps.length?`${requiredMaps.filter(m=>!!m.preview&&!!m.snapshotAt).length}/${requiredMaps.length} figée(s)`:'');
     add('WARNING','Cartographie','Échelle toujours visible', state.mapView.scaleAlwaysVisible === true);
     add('WARNING','Cartographie','Nord toujours visible', state.mapView.northAlwaysVisible === true);
 
