@@ -150,7 +150,7 @@
         s.externalData.weather={status:'AUTO_DETECTED',provider:w.provider,retrievedAt:w.retrievedAt,data:w,warning:''};
         s.dataStatus.weather='AUTO_DETECTED';
         s.visit.weather=weatherSummary(w);
-        s.visit.weather7=`Donnée automatique ${w.mode==='historical'?'historique':'prévisionnelle'} — à confirmer si nécessaire`;
+        s.visit.weather7=w.trend7Text || `Donnée automatique ${w.mode==='historical'?'historique':'prévisionnelle'} — à confirmer si nécessaire`;
         commit();
       }catch(err){
         s.externalData.weather={status:'UNAVAILABLE',provider:'WeatherConnector',retrievedAt:new Date().toISOString(),data:null,warning:err.message};
