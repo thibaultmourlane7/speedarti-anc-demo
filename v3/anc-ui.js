@@ -126,10 +126,17 @@
         </div>
         <div>
           <h3 style="margin-top:0">Contraintes environnementales</h3>
-          <p class="anc-source-note">Les recherches doivent être automatisées par connecteurs officiels. Géorisques v2 sera appelé côté backend pour protéger le jeton. Une panne de source ne doit jamais signifier « aucune contrainte ».</p>
+          <p class="anc-source-note">La démo interroge Géorisques v1 automatiquement. La future intégration production v2 devra passer par le backend afin de ne jamais exposer son jeton.</p>
           <p>${statusBadge(s.dataStatus.environment)}</p>
-          <div class="anc-v3-toolbar"><button class="btn secondary" type="button" id="anc-env-prepare">Préparer les sources</button><button class="btn secondary" type="button" id="anc-georisques-report">Ouvrir le rapport Géorisques</button></div>
+          <div class="anc-v3-toolbar"><button class="btn secondary" type="button" id="anc-env-prepare">Analyser automatiquement</button><button class="btn secondary" type="button" id="anc-georisques-report">Ouvrir le rapport Géorisques</button></div>
         </div>
+      </div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid #e5edf4">
+        <h3 style="margin:0 0 6px">BRGM / InfoTerre</h3>
+        <p class="anc-source-note" id="anc-brgm-summary">${s.externalData?.geology?.data?.catalog?.summary?esc(s.externalData.geology.data.catalog.summary):'Feuille, code et contexte géologique non encore interrogés.'}</p>
+        <p>${statusBadge(s.dataStatus.geology)}</p>
+        <div class="anc-v3-toolbar"><button class="btn secondary" type="button" id="anc-brgm-fetch">🪨 Rechercher automatiquement</button><button class="btn ghost" type="button" id="anc-brgm-open">Ouvrir InfoTerre</button></div>
+        <p class="anc-source-note"><b>Échelle source géologique : 1:50 000.</b> Cette précision ne change pas lorsque le plan ANC est zoomé ou exporté à une autre échelle.</p>
       </div>`;
     section.insertAdjacentHTML('afterbegin',card('anc-v3-auto-terrain','Automatisation de la visite','La météo et les sources environnementales sont liées au lieu et à la date de visite.',body));
 
@@ -205,6 +212,45 @@
       const lat=num(s.parcel?.lat),lng=num(s.parcel?.lng);
       if(lat===undefined||lng===undefined){alert('Localisez d’abord le chantier.');return}
       window.open(`https://www.georisques.gouv.fr/api/v1/rapport_pdf?latlon=${encodeURIComponent(lng+','+lat)}`,'_blank','noopener');
+    });
+
+    document.getElementById('anc-brgm-fetch')?.addEventListener('click',async e=>{
+      const lat=num(s.parcel?.lat),lng=num(s.parcel?.lng);
+      if(lat===undefined||lng===undefined){alert('Localisez d’abord le chantier.');return}
+      const b=e.currentTarget;b.disabled=true;b.textContent='Recherche BRGM…';
+      try{
+        const data=await connectors()?.brgmContextAtPoint?.({latitude:lat,longitude:lng});
+        s.externalData.geology={
+          status:data?.status||'TO_CONFIRM',
+          provider:'BRGM / InfoTerre',
+          retrievedAt:data?.retrievedAt||new Date().toISOString(),
+          data,
+          warning:data?.warning||''
+        };
+        s.dataStatus.geology=data?.status||'TO_CONFIRM';
+        const cat=data?.catalog||{};
+        const parts=[
+          cat.sheetCode?('Code / feuille : '+cat.sheetCode):'',
+          cat.sheetName?('Nom : '+cat.sheetName):'',
+          cat.noticeRef?('Notice : '+cat.noticeRef):'',
+          cat.summary?cat.summary:''
+        ].filter(Boolean);
+        if(s.parcel){
+          s.parcel.geology=parts.join(' · ') || 'BRGM interrogé — données détaillées à confirmer';
+          s.parcel.geologySource='BRGM / InfoTerre — carte géologique source 1:50 000';
+        }
+        commit();
+      }catch(err){
+        s.externalData.geology={status:'UNAVAILABLE',provider:'BRGM / InfoTerre',retrievedAt:new Date().toISOString(),data:null,warning:err.message};
+        s.dataStatus.geology='UNAVAILABLE';
+        commit();
+      }finally{
+        b.disabled=false;b.textContent='🪨 Rechercher automatiquement';
+      }
+    });
+
+    document.getElementById('anc-brgm-open')?.addEventListener('click',()=>{
+      window.open('https://infoterre.brgm.fr/viewer/MainTileForward.do','_blank','noopener');
     });
   }
 
