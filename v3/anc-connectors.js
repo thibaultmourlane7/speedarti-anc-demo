@@ -183,15 +183,59 @@
     };
   }
 
+  function extractGeorisquesRisks(payload) {
+    const out=[];
+    const seen=new Set();
+    function walk(value,path='root'){
+      if(!value || typeof value!=='object')return;
+      if(!Array.isArray(value) && typeof value.present==='boolean'){
+        const label=String(value.libelle || value.label || value.nom || path.split('.').at(-1) || '').trim();
+        const key=label.toLowerCase();
+        if(label && !seen.has(key)){
+          seen.add(key);
+          out.push({
+            key:path,
+            label,
+            present:value.present,
+            statutAdresse:value.libelleStatutAdresse || value.statutAdresse || '',
+            statutCommune:value.libelleStatutCommune || value.statutCommune || '',
+            specifique:value.specifique || ''
+          });
+        }
+      }
+      if(Array.isArray(value))value.forEach((x,i)=>walk(x,`${path}[${i}]`));
+      else Object.entries(value).forEach(([k,v])=>walk(v,`${path}.${k}`));
+    }
+    walk(payload);
+    return out;
+  }
+
+  async function georisquesRiskReport({latitude,longitude,rayon=1000}) {
+    if(latitude===undefined || longitude===undefined)throw new Error('Coordonnées manquantes.');
+    const endpoint='https://georisques.gouv.fr/api/v1/resultats_rapport_risque';
+    const requestUrl=url(endpoint,{latlon:`${longitude},${latitude}`,rayon});
+    const raw=await json(requestUrl,{timeout:15000});
+    return {
+      provider:'Géorisques API v1',
+      apiVersion:'v1',
+      retrievedAt:new Date().toISOString(),
+      requestUrl,
+      risks:extractGeorisquesRisks(raw),
+      raw
+    };
+  }
+
   function georisquesConnectorInfo() {
     return {
       provider:'Géorisques',
-      apiVersion:'v2',
-      requiresBackendToken:true,
+      demoApiVersion:'v1',
+      productionTarget:'v2',
+      v1DirectRead:true,
+      v2RequiresBackendToken:true,
       browserDirectWrite:false,
-      status:'BACKEND_REQUIRED',
-      reason:'Les nouveaux endpoints API v2 utilisent un jeton annuel. Le secret ne doit jamais être exposé dans le dépôt public.',
-      fallback:'API v1 ou saisie/validation manuelle selon la donnée ; ne jamais conclure « aucune contrainte » en cas d’échec.',
+      status:'READY_V1__BACKEND_REQUIRED_V2',
+      reason:'La démo peut lire l’API publique v1. La migration production vers v2 doit garder le jeton côté backend.',
+      fallback:'Saisie/validation manuelle si la source est indisponible ; ne jamais conclure « aucune contrainte » en cas d’échec.',
       sourceUrl:'https://www.georisques.gouv.fr/'
     };
   }
@@ -223,6 +267,8 @@
     ignLayers,
     brgmLayers,
     georisquesConnectorInfo,
+    georisquesRiskReport,
+    extractGeorisquesRisks,
     officialSourceRegistry
   };
 })();
