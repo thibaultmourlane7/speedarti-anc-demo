@@ -511,7 +511,8 @@
       m.source=d.source||m.source;
       m.sourceDate=new Date().toISOString().slice(0,10);
       m.sourceScale=d.sourceScale||m.sourceScale||'';
-      if(d.imageUrl && !m.preview)m.background=d.imageUrl;
+      const manualBackground=typeof m.background==='string' && m.background.startsWith('data:image/');
+      if(d.imageUrl && !m.preview && !manualBackground)m.background=d.imageUrl;
       return m;
     });
   }
