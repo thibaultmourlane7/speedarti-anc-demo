@@ -365,7 +365,7 @@
     const activeMap=(s.maps||[]).find(m=>m.kind===activeKind)||(s.maps||[]).find(m=>m.kind==='layout');
     const scale=Number(activeMap?.scale||s.mapView?.exportScale||500);
     const connected=(s.maps||[]).filter(m=>m.liveConnected).length;
-    const frozen=!!activeMap?.preview;
+    const frozen=!!activeMap?.preview && !!activeMap?.snapshotAt;
     const frozenAt=activeMap?.snapshotAt?new Date(activeMap.snapshotAt).toLocaleString('fr-FR'):'';
     const metric=core()?.mapMetricSummary?.(s)||{};
     const metricCards=`<div class="metric-results" style="margin-bottom:12px">
