@@ -18,6 +18,16 @@
     } finally { clearTimeout(timer); }
   }
 
+  async function text(url, options={}) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(()=>ctrl.abort(), options.timeout || 12000);
+    try {
+      const r = await fetch(url, {headers:{Accept:'text/plain,application/vnd.ogc.gml,text/xml,*/*', ...(options.headers||{})}, signal:ctrl.signal});
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return await r.text();
+    } finally { clearTimeout(timer); }
+  }
+
   function url(base, params) {
     const u = new URL(base);
     Object.entries(params||{}).forEach(([k,v])=>{
@@ -152,6 +162,71 @@
     };
   }
 
+  function parseBrgmFeatureInfo(raw='') {
+    const clean=String(raw||'').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim();
+    const lines=String(raw||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+    const entries={};
+    for(const line of lines){
+      const m=line.match(/^([^:=]{1,80})\s*[:=]\s*(.+)$/);
+      if(m)entries[m[1].trim()]=m[2].trim();
+    }
+    const pick=(patterns)=>{
+      for(const [k,v] of Object.entries(entries)){
+        if(patterns.some(rx=>rx.test(k)))return v;
+      }
+      return '';
+    };
+    return {
+      sheetCode:pick([/code/i,/numero/i,/num.?feuille/i,/n.?carte/i]),
+      sheetName:pick([/nom/i,/feuille/i,/titre/i]),
+      noticeRef:pick([/notice/i,/rapport/i,/document/i]),
+      summary:clean.slice(0,1200),
+      fields:entries
+    };
+  }
+
+  async function brgmFeatureInfo({latitude,longitude,layer='SCAN_F_GEOL50_CATALOG'}) {
+    if(latitude===undefined||longitude===undefined)throw new Error('Coordonnées manquantes.');
+    const delta=0.02;
+    const requestUrl=url(BRGM_WMS,{
+      SERVICE:'WMS',VERSION:'1.1.1',REQUEST:'GetFeatureInfo',
+      LAYERS:layer,QUERY_LAYERS:layer,STYLES:'',
+      SRS:'EPSG:4326',
+      BBOX:`${Number(longitude)-delta},${Number(latitude)-delta},${Number(longitude)+delta},${Number(latitude)+delta}`,
+      WIDTH:101,HEIGHT:101,X:50,Y:50,
+      FORMAT:'image/png',INFO_FORMAT:'text/plain',FEATURE_COUNT:10
+    });
+    const raw=await text(requestUrl,{timeout:15000});
+    const parsed=parseBrgmFeatureInfo(raw);
+    return {
+      provider:'BRGM / InfoTerre',
+      layer,
+      sourceScale:layer.includes('GEOL50')?'1:50 000':'variable',
+      retrievedAt:new Date().toISOString(),
+      requestUrl,
+      ...parsed,
+      raw
+    };
+  }
+
+  async function brgmContextAtPoint({latitude,longitude}) {
+    const result={
+      provider:'BRGM / InfoTerre',
+      retrievedAt:new Date().toISOString(),
+      status:'TO_CONFIRM',
+      catalog:null,
+      geology:null,
+      warning:''
+    };
+    const errors=[];
+    try{result.catalog=await brgmFeatureInfo({latitude,longitude,layer:'SCAN_F_GEOL50_CATALOG'});}catch(e){errors.push('catalogue : '+e.message);}
+    try{result.geology=await brgmFeatureInfo({latitude,longitude,layer:'SCAN_D_GEOL50'});}catch(e){errors.push('géologie : '+e.message);}
+    const useful=!!(result.catalog?.sheetCode||result.catalog?.sheetName||result.catalog?.noticeRef||result.catalog?.summary||result.geology?.summary);
+    result.status=useful?'AUTO_DETECTED':'TO_CONFIRM';
+    result.warning=errors.join(' · ');
+    return result;
+  }
+
   function brgmLayers() {
     return {
       geology50: {
@@ -266,6 +341,9 @@
     weatherDateMode,
     ignLayers,
     brgmLayers,
+    brgmFeatureInfo,
+    brgmContextAtPoint,
+    parseBrgmFeatureInfo,
     georisquesConnectorInfo,
     georisquesRiskReport,
     extractGeorisquesRisks,
