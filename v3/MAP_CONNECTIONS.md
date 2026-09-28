@@ -90,3 +90,13 @@ Un fond manuel importé par Fred n'est jamais écrasé automatiquement.
 Aucune connexion cartographique de ce dépôt de démonstration n'écrit dans GSTAI.
 
 GSTAI reste strictement en lecture seule pour les agents IA ; seule Anne-Sophie est autorisée à le modifier.
+
+## Éditeur unique et figement
+
+L’implantation ANC et le calcul métrique utilisent désormais **le même éditeur** dans l’onglet `Plan & métrés`.
+
+Toutes les cartes et tous les calques sont accessibles à cet endroit. Les vues `Situation`, `Cadastre`, `Vue aérienne`, `Inondation`, `Remontée de nappe`, `Contraintes`, `Géologie`, `Sondages / Porchet`, `Implantation ANC` et `Tranchées` sont des préréglages du même espace de travail.
+
+Le technicien peut figer une vue dans le dossier. Cette capture n’empêche jamais l’édition de la carte live. Après modification, il peut mettre à jour l’image figée. La version de capture, la date, le centre, le zoom et les calques actifs sont enregistrés avec l’image.
+
+L’onglet `Cartes dossier` sert à consulter ces images figées et à les réutiliser dans le rapport.
