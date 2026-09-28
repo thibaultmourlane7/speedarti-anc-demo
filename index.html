@@ -115,7 +115,7 @@
     map('flood','Carte Géorisques — risque d’inondation','conditional','Contraintes environnementales',5000,'Géorisques — inondation'),
     map('groundwater','Carte Géorisques — remontée de nappe','conditional','Contraintes environnementales',5000,'Géorisques — remontée de nappe'),
     map('environment','Carte des contraintes environnementales complémentaires','conditional','Contraintes environnementales',5000,'DREAL / ARS / SANDRE / autre source officielle'),
-    map('geology','Carte géologique BRGM','mandatory','Contexte géologique',25000,'BRGM / InfoTerre'),
+    map('geology','Carte géologique BRGM','mandatory','Contexte géologique',50000,'BRGM / InfoTerre — carte géologique source 1:50 000'),
     map('investigation','Annexe 1 — localisation des sondages et tests Porchet','mandatory','Annexe 1',400,'Orthophoto et cadastre IGN — annotations bureau d’études'),
     map('layout','Annexe 2 — plan d’implantation de la filière ANC','mandatory','Annexe 2',400,'Orthophoto et cadastre IGN — schéma de principe'),
     map('trenches','Annexe 3 — tranchées d’infiltration à faible profondeur','conditional','Annexe 3',200,'Schéma technique généré — validation professionnelle obligatoire'),
@@ -423,7 +423,42 @@
     const catalog=geoInfo+`<div class="stats"><div class="stat"><strong>${state.maps.filter(m=>isMapRequired(m)).length}</strong><span>cartes requises pour ce dossier</span></div><div class="stat"><strong>${state.maps.filter(m=>m.preview).length}/${state.maps.length}</strong><span>exports prêts</span></div><div class="stat"><strong>${state.maps.filter(m=>isMapRequired(m)&&m.preview).length}/${state.maps.filter(m=>isMapRequired(m)).length}</strong><span>cartes requises générées</span></div><div class="stat"><strong>${state.maps.filter(m=>num(m.centerLat)!==undefined&&num(m.centerLng)!==undefined).length}/${state.maps.length}</strong><span>cartes géolocalisées</span></div></div><div class="map-catalog">${state.maps.map((m,i)=>renderMapCard(m,i)).join('')}</div>`;
     return sec('cartes','🗺️','Cartographie complète','Situation, cadastre, satellite, Géorisques, géologie BRGM et annexes 1, 2 et 3. Le centre géographique est maintenant commun et automatisé à partir du dossier.',catalog,`<button class="btn secondary" data-action="sync-map-location">📍 Recentrer toutes les cartes</button><button class="btn secondary" data-action="add-map">+ Carte personnalisée</button>`);
   }
-  function renderMapCard(m,i){return `<article class="map-card"><div class="map-preview">${m.preview||m.background?`<img src="${m.preview||m.background}" alt="${esc(m.title)}">`:`<div class="map-placeholder"><div class="map-grid-lines"></div><strong>${esc(m.title)}</strong><small>Importer un fond ou générer l’export</small></div>`}${m.north?'<span class="north">N</span>':''}${m.scaleBar?`<span class="scale-bar">1:${Number(m.scale||0).toLocaleString('fr-FR')}</span>`:''}</div><div class="map-card-body"><div class="chip-row"><span class="chip ${isMapRequired(m)?'mandatory':m.requirement}">${isMapRequired(m)?'Requise pour ce dossier':m.requirement==='conditional'?'Non requise actuellement':'Optionnelle'}</span><span class="chip ${m.scaleVerified?'mandatory':'conditional'}">${m.scaleVerified?'Échelle vérifiée':'Échelle déclarée'}</span></div><h3>${esc(m.title)}</h3><p>${esc(m.reportSection)} — ${esc(m.source)}</p>${num(m.centerLat)!==undefined&&num(m.centerLng)!==undefined?`<div class="map-center-meta">📍 Centre automatique : ${fmt(m.centerLat,6)} / ${fmt(m.centerLng,6)}<br>${esc(m.centerLabel||'Coordonnées du dossier')}</div>`:'<div class="map-center-meta">⚠ Carte non encore rattachée à une géolocalisation.</div>'}<div class="map-fields">${dynInput(`maps.${i}.scale`,'Échelle',m.scale,'number')}${dynInput(`maps.${i}.sourceDate`,'Date source',m.sourceDate,'date')}${dynInput(`maps.${i}.source`,'Source',m.source,'text','span2')}${dynInput(`maps.${i}.projection`,'Projection / repère',m.projection,'text','span2')}</div>${toggle(`maps.${i}.scaleVerified`,'Échelle contrôlée','À activer uniquement après vérification du rendu à la taille d’impression prévue.')}<div class="map-buttons"><button class="btn secondary small" data-action="upload-map" data-id="${m.id}">Importer le fond</button><button class="btn primary small" data-action="edit-map" data-id="${m.id}">Annoter / échelle</button><button class="btn danger small" data-action="clear-map" data-id="${m.id}">Effacer</button></div></div></article>`}
+  function renderMapCard(m,i){
+    const connected=!!m.liveConnected;
+    const external=m.connection?.externalUrl||'';
+    const sourceScale=m.sourceScale||m.connection?.sourceScale||'';
+    return `<article class="map-card">
+      <div class="map-preview">
+        ${m.preview||m.background?`<img src="${m.preview||m.background}" alt="${esc(m.title)}">`:`<div class="map-placeholder"><div class="map-grid-lines"></div><strong>${esc(m.title)}</strong><small>${connected?'Source connectée — chargement réseau requis':'Source non encore connectée'}</small></div>`}
+        ${m.north?'<span class="north">N</span>':''}
+        ${m.scaleBar?`<span class="scale-bar">1:${Number(m.scale||0).toLocaleString('fr-FR')}</span>`:''}
+      </div>
+      <div class="map-card-body">
+        <div class="chip-row">
+          <span class="chip ${isMapRequired(m)?'mandatory':m.requirement}">${isMapRequired(m)?'Requise pour ce dossier':m.requirement==='conditional'?'Conditionnelle':'Optionnelle'}</span>
+          <span class="chip ${connected?'mandatory':'conditional'}">${connected?'Source connectée':'À connecter'}</span>
+          ${sourceScale?`<span class="chip conditional">Source ${esc(sourceScale)}</span>`:''}
+        </div>
+        <h3>${esc(m.title)}</h3>
+        <p>${esc(m.reportSection)} — ${esc(m.source)}</p>
+        ${num(m.centerLat)!==undefined&&num(m.centerLng)!==undefined?`<div class="map-center-meta">📍 Centre automatique : ${fmt(m.centerLat,6)} / ${fmt(m.centerLng,6)}<br>${esc(m.centerLabel||'Coordonnées du dossier')}</div>`:'<div class="map-center-meta">⚠ Carte non encore rattachée à une géolocalisation.</div>'}
+        ${m.connection?.note?`<div class="field-help">${esc(m.connection.note)}</div>`:''}
+        <div class="map-fields">
+          ${dynInput(`maps.${i}.scale`,'Échelle du document',m.scale,'number')}
+          ${dynInput(`maps.${i}.sourceDate`,'Date source',m.sourceDate,'date')}
+          ${dynInput(`maps.${i}.source`,'Source',m.source,'text','span2')}
+          ${dynInput(`maps.${i}.projection`,'Projection / repère',m.projection,'text','span2')}
+        </div>
+        ${toggle(`maps.${i}.scaleVerified`,'Échelle contrôlée','À activer uniquement après vérification physique du rendu à la taille d’impression prévue.')}
+        <div class="map-buttons">
+          ${external?`<button class="btn primary small" data-action="open-map-source" data-index="${i}">Ouvrir la source officielle</button>`:''}
+          <button class="btn secondary small" data-action="upload-map" data-id="${m.id}">Importer un fond (secours)</button>
+          <button class="btn primary small" data-action="edit-map" data-id="${m.id}">Annoter / échelle</button>
+          <button class="btn danger small" data-action="clear-map" data-id="${m.id}">Effacer</button>
+        </div>
+      </div>
+    </article>`
+  }
 
   function renderAutomation(){
     const eh=calculateEh();
@@ -509,6 +544,11 @@
     if(a==='undo-map'){editor.map?.annotations.pop();drawCanvas()}
     if(a==='clear-annotations'){if(editor.map){editor.map.annotations=[];drawCanvas()}}
     if(a==='save-map-preview'){saveMapPreview()}
+    if(a==='open-map-source'){
+      const i=Number(btn?.dataset?.index);
+      const url=state.maps?.[i]?.connection?.externalUrl;
+      if(url)window.open(url,'_blank','noopener');
+    }
   }
 
   function fmt(v,d=1){return num(v)===undefined?'—':Number(v).toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d})}
