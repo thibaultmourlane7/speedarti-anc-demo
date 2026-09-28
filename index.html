@@ -420,16 +420,21 @@
 
   function renderMaps(){
     const geoInfo=hasParcelCoordinates()?`<div class="notice good" style="margin-bottom:14px"><b>📍 Centre géographique commun actif :</b> ${esc(state.parcel.geocodeLabel||parcelAddressQuery())} — toutes les cartes du dossier héritent du point ${fmt(state.parcel.lat,6)} / ${fmt(state.parcel.lng,6)}.</div>`:`<div class="notice warn" style="margin-bottom:14px"><b>Localisation manquante :</b> retournez dans Dossier pour géocoder l’adresse ou utiliser le GPS.</div>`;
-    const catalog=geoInfo+`<div class="stats"><div class="stat"><strong>${state.maps.filter(m=>isMapRequired(m)).length}</strong><span>cartes requises pour ce dossier</span></div><div class="stat"><strong>${state.maps.filter(m=>m.preview).length}/${state.maps.length}</strong><span>exports prêts</span></div><div class="stat"><strong>${state.maps.filter(m=>isMapRequired(m)&&m.preview).length}/${state.maps.filter(m=>isMapRequired(m)).length}</strong><span>cartes requises générées</span></div><div class="stat"><strong>${state.maps.filter(m=>num(m.centerLat)!==undefined&&num(m.centerLng)!==undefined).length}/${state.maps.length}</strong><span>cartes géolocalisées</span></div></div><div class="map-catalog">${state.maps.map((m,i)=>renderMapCard(m,i)).join('')}</div>`;
-    return sec('cartes','🗺️','Cartographie complète','Situation, cadastre, satellite, Géorisques, géologie BRGM et annexes 1, 2 et 3. Le centre géographique est maintenant commun et automatisé à partir du dossier.',catalog,`<button class="btn secondary" data-action="sync-map-location">📍 Recentrer toutes les cartes</button><button class="btn secondary" data-action="add-map">+ Carte personnalisée</button>`);
+    const catalog=geoInfo+`<div class="notice info" style="margin-bottom:14px"><b>Bibliothèque du dossier :</b> les cartes restent modifiables dans <b>Plan & métrés</b>. Cet écran conserve uniquement les images figées qui serviront au dossier et au rapport.</div><div class="stats"><div class="stat"><strong>${state.maps.filter(m=>isMapRequired(m)).length}</strong><span>cartes requises</span></div><div class="stat"><strong>${state.maps.filter(m=>m.preview).length}/${state.maps.length}</strong><span>images figées</span></div><div class="stat"><strong>${state.maps.filter(m=>isMapRequired(m)&&m.preview).length}/${state.maps.filter(m=>isMapRequired(m)).length}</strong><span>images requises prêtes</span></div><div class="stat"><strong>${state.maps.filter(m=>num(m.centerLat)!==undefined&&num(m.centerLng)!==undefined).length}/${state.maps.length}</strong><span>cartes géolocalisées</span></div></div><div class="map-catalog">${state.maps.map((m,i)=>renderMapCard(m,i)).join('')}</div>`;
+    return sec('cartes','🗺️','Images cartographiques du dossier','Les images figées proviennent du même éditeur Plan & métrés. Fred peut toujours revenir modifier la carte live puis mettre à jour l’image.',catalog,`<button class="btn primary" data-action="open-plan-workspace">📐 Ouvrir Plan & métrés</button><button class="btn secondary" data-action="sync-map-location">📍 Recentrer toutes les cartes</button>`);
   }
   function renderMapCard(m,i){
     const connected=!!m.liveConnected;
     const external=m.connection?.externalUrl||'';
     const sourceScale=m.sourceScale||m.connection?.sourceScale||'';
+    const frozen=!!m.preview;
+    const frozenAt=m.snapshotAt?new Date(m.snapshotAt).toLocaleString('fr-FR'):'';
+    const layerSummary=Array.isArray(m.snapshotLayers)&&m.snapshotLayers.length
+      ?m.snapshotLayers.map(x=>x.label||x.id).filter(Boolean).join(' + ')
+      :(m.snapshotSourceSummary||'');
     return `<article class="map-card">
       <div class="map-preview">
-        ${m.preview||m.background?`<img src="${m.preview||m.background}" alt="${esc(m.title)}">`:`<div class="map-placeholder"><div class="map-grid-lines"></div><strong>${esc(m.title)}</strong><small>${connected?'Source connectée — chargement réseau requis':'Source non encore connectée'}</small></div>`}
+        ${frozen?`<img src="${m.preview}" alt="${esc(m.title)}">`:(m.background?`<img src="${m.background}" alt="${esc(m.title)}">`:`<div class="map-placeholder"><div class="map-grid-lines"></div><strong>${esc(m.title)}</strong><small>${connected?'Carte live connectée — aucune image figée':'Source non encore connectée'}</small></div>`)}
         ${m.north?'<span class="north">N</span>':''}
         ${m.scaleBar?`<span class="scale-bar">1:${Number(m.scale||0).toLocaleString('fr-FR')}</span>`:''}
       </div>
@@ -437,10 +442,12 @@
         <div class="chip-row">
           <span class="chip ${isMapRequired(m)?'mandatory':m.requirement}">${isMapRequired(m)?'Requise pour ce dossier':m.requirement==='conditional'?'Conditionnelle':'Optionnelle'}</span>
           <span class="chip ${connected?'mandatory':'conditional'}">${connected?'Source connectée':'À connecter'}</span>
+          <span class="chip ${frozen?'mandatory':'conditional'}">${frozen?`Image figée v${Number(m.snapshotVersion)||1}`:'Pas encore figée'}</span>
           ${sourceScale?`<span class="chip conditional">Source ${esc(sourceScale)}</span>`:''}
         </div>
         <h3>${esc(m.title)}</h3>
         <p>${esc(m.reportSection)} — ${esc(m.source)}</p>
+        ${frozen?`<div class="notice good"><b>Image enregistrée dans le dossier.</b><br>Dernière mise à jour : ${esc(frozenAt||'date non enregistrée')}${layerSummary?`<br>Calques figés : ${esc(layerSummary)}`:''}</div>`:'<div class="notice info">La carte live reste disponible dans Plan & métrés. Figez-la lorsque le rendu est prêt pour le dossier.</div>'}
         ${num(m.centerLat)!==undefined&&num(m.centerLng)!==undefined?`<div class="map-center-meta">📍 Centre automatique : ${fmt(m.centerLat,6)} / ${fmt(m.centerLng,6)}<br>${esc(m.centerLabel||'Coordonnées du dossier')}</div>`:'<div class="map-center-meta">⚠ Carte non encore rattachée à une géolocalisation.</div>'}
         ${m.connection?.note?`<div class="field-help">${esc(m.connection.note)}</div>`:''}
         <div class="map-fields">
@@ -451,10 +458,10 @@
         </div>
         ${toggle(`maps.${i}.scaleVerified`,'Échelle contrôlée','À activer uniquement après vérification physique du rendu à la taille d’impression prévue.')}
         <div class="map-buttons">
-          ${external?`<button class="btn primary small" data-action="open-map-source" data-index="${i}">Ouvrir la source officielle</button>`:''}
-          <button class="btn secondary small" data-action="upload-map" data-id="${m.id}">Importer un fond (secours)</button>
-          <button class="btn primary small" data-action="edit-map" data-id="${m.id}">Annoter / échelle</button>
-          <button class="btn danger small" data-action="clear-map" data-id="${m.id}">Effacer</button>
+          <button class="btn primary small" data-action="open-plan-kind" data-kind="${esc(m.kind)}">📐 Modifier / refiger dans Plan & métrés</button>
+          ${external?`<button class="btn secondary small" data-action="open-map-source" data-index="${i}">Ouvrir la source officielle</button>`:''}
+          <button class="btn secondary small" data-action="upload-map" data-id="${m.id}">Importer une image (secours)</button>
+          ${frozen?`<button class="btn danger small" data-action="clear-map-snapshot" data-id="${m.id}">Supprimer l’image figée</button>`:''}
         </div>
       </div>
     </article>`
@@ -538,6 +545,9 @@
     if(a==='add-map'){state.maps.push(map('custom',`Plan personnalisé ${state.maps.length+1}`,'optional','Annexe personnalisée',500,'Source à préciser'));scheduleSave();render()}
     if(a==='upload-map'){pendingMapId=b.dataset.id;$('#map-import').click()}
     if(a==='edit-map')openMapEditor(b.dataset.id);
+    if(a==='open-plan-workspace'){state.activeTab='geometrie';state.mapView=state.mapView||{};state.mapView.activeKind=state.mapView.activeKind||'layout';scheduleSave();render()}
+    if(a==='open-plan-kind'){state.activeTab='geometrie';state.mapView=state.mapView||{};state.mapView.activeKind=b.dataset.kind||'layout';const mm=state.maps.find(x=>x.kind===state.mapView.activeKind);if(mm?.scale)state.mapView.exportScale=Number(mm.scale);scheduleSave();render()}
+    if(a==='clear-map-snapshot'){const m=state.maps.find(x=>x.id===b.dataset.id);if(m){m.preview='';m.snapshotVersion=0;m.snapshotAt='';m.snapshotCenter=null;m.snapshotZoom=null;m.snapshotLayers=[];m.snapshotSourceSummary='';m.scaleVerified=false;scheduleSave();render()}}
     if(a==='clear-map'){const m=state.maps.find(x=>x.id===b.dataset.id);if(m){m.background='';m.preview='';m.annotations=[];m.scaleVerified=false;scheduleSave();render()}}
     if(a==='generate'){generateAutomation(state);scheduleSave();render()}
     if(a==='close-map')closeMapEditor();
