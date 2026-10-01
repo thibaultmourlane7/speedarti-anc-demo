@@ -13,7 +13,7 @@ Ce dépôt `speedarti-anc-demo` est le dépôt de démonstration ANC sur lequel 
 ## Version publiée
 
 - Version : **V3.0 bêta métier Fred**
-- Build : 28/09/2026
+- Build : 01/10/2026
 - Fonctionnement : autonome dans le navigateur
 - Stockage métier : IndexedDB local
 - PWA : manifeste + Service Worker
@@ -114,6 +114,34 @@ Fred peut :
 La mise à jour remplace l’image active de la carte et incrémente sa version de capture. La carte live n’est jamais verrouillée par le figement.
 
 Les anciennes prévisualisations techniques ne sont pas considérées comme des images figées tant qu’une vraie capture n’a pas été réalisée.
+
+### Éléments optionnels d’implantation
+
+Dans la vue **Implantation ANC**, une palette repliable permet d’ajouter uniquement lorsque nécessaire :
+
+- arbre ;
+- buisson / arbuste ;
+- haie ;
+- puits / captage ;
+- mare / bassin ;
+- fossé ;
+- cours d’eau ;
+- exutoire ;
+- clôture ;
+- mur ;
+- terrasse ;
+- annexe / cabanon ;
+- accès / voirie ;
+- regard ;
+- réseau existant ;
+- zone d’exclusion.
+
+Le moteur choisit le type de dessin recommandé :
+- **point** pour les objets ponctuels ;
+- **ligne** pour haies, clôtures, fossés et réseaux ;
+- **polygone** pour mares, terrasses, annexes et zones.
+
+Ces objets restent totalement modifiables et supprimables. Ils font partie des objets vectoriels du plan et sont donc visibles dans l’image figée lorsque la carte est capturée.
 
 ## Échelle et cartographie
 
