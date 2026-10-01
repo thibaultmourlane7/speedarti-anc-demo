@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'speedarti-anc-v3-20261001-implantation-options';
+const CACHE_VERSION = 'speedarti-anc-v3-20261001-implantation-drawing-fix';
 const SHELL = [
   './',
   './index.html',
