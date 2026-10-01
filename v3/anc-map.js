@@ -7,6 +7,7 @@
   let riskMarker = null;
   let northControl = null;
   let infoControl = null;
+  let pendingRole = null;
 
   const getApi = () => window.SpeedArtiANC;
   const getState = () => getApi()?.getState?.();
@@ -38,14 +39,45 @@
     return {};
   }
 
+  function roleDefinition(role) {
+    return window.ANCV3Core?.implantationObjectDefinition?.(role) || {
+      role:role||'annotation',
+      label:role||'Objet ANC',
+      category:'other',
+      geometry:'point',
+      optional:true
+    };
+  }
+
   function roleLabel(role) {
-    return ({
-      house:'Bâtiment', treatment:'Filière ANC', pipe:'Canalisation', borehole:'Sondage',
-      porchet:'Test Porchet', well:'Puits / captage', outlet:'Exutoire / fossé',
-      exclusion:'Zone d’exclusion', access:'Accès', tree:'Arbre / végétation',
-      parcel:'Parcelle', available:'Zone disponible ANC',
-      annotation:'Annotation'
-    })[role] || role || 'Objet ANC';
+    return roleDefinition(role).label || role || 'Objet ANC';
+  }
+
+  function roleIcon(role) {
+    return roleDefinition(role).icon || '';
+  }
+
+  function pointIcon(role) {
+    const symbol=roleIcon(role);
+    if(!symbol || !window.L)return null;
+    return L.divIcon({
+      className:'anc-map-object-icon',
+      html:`<span title="${roleLabel(role).replace(/"/g,'&quot;')}">${symbol}</span>`,
+      iconSize:[30,30],
+      iconAnchor:[15,15]
+    });
+  }
+
+  function roleStyle(role) {
+    const def=roleDefinition(role);
+    const base={weight:3,fillOpacity:.16};
+    if(def.category==='vegetation')return {...base,dashArray:role==='hedge'?'7 5':undefined};
+    if(def.category==='water')return {...base,dashArray:(role==='ditch'||role==='watercourse')?'10 5':undefined};
+    if(def.category==='network')return {...base,dashArray:'4 5'};
+    if(def.category==='constraint')return {...base,dashArray:'8 5'};
+    if(role==='fence')return {...base,dashArray:'3 4'};
+    if(role==='wall')return {...base,weight:5};
+    return base;
   }
 
   function featureFromLayer(layer) {
@@ -81,9 +113,13 @@
   function layerFromFeature(feature) {
     if(!window.L || !feature?.geometry) return null;
     const wrapper={type:'Feature',properties:{...(feature.properties||{}),id:feature.id,role:feature.role},geometry:feature.geometry};
+    const role=feature.role||feature.properties?.role||'annotation';
     const gj=L.geoJSON(wrapper,{
-      pointToLayer:(f,latlng)=>L.marker(latlng),
-      style:()=>({weight:3})
+      pointToLayer:(f,latlng)=>{
+        const icon=pointIcon(role);
+        return icon?L.marker(latlng,{icon}):L.marker(latlng);
+      },
+      style:()=>roleStyle(role)
     });
     let out=null;
     gj.eachLayer(l=>out=l);
@@ -185,16 +221,44 @@
     map.addControl(control);
 
     map.on(L.Draw.Event.CREATED,e=>{
-      const role=document.getElementById('anc-map-role')?.value||'annotation';
+      const role=pendingRole||document.getElementById('anc-map-role')?.value||'annotation';
+      pendingRole=null;
       e.layer.options=e.layer.options||{};
       e.layer.options.ancRole=role;
       e.layer.options.ancId=`feature_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+      const icon=pointIcon(role);
+      if(icon&&e.layer.setIcon)e.layer.setIcon(icon);
+      if(e.layer.setStyle)e.layer.setStyle(roleStyle(role));
       e.layer.bindTooltip(roleLabel(role),{sticky:true});
       drawn.addLayer(e.layer);
       syncDrawnToState();
     });
     map.on(L.Draw.Event.EDITED,syncDrawnToState);
     map.on(L.Draw.Event.DELETED,syncDrawnToState);
+  }
+
+  function startDrawingRole(role) {
+    if(!map||!window.L?.Draw)return false;
+    const def=roleDefinition(role);
+    pendingRole=def.role;
+    const select=document.getElementById('anc-map-role');
+    if(select)select.value=def.role;
+
+    let drawer=null;
+    if(def.geometry==='polyline') {
+      drawer=new L.Draw.Polyline(map,{shapeOptions:roleStyle(def.role)});
+    } else if(def.geometry==='polygon') {
+      drawer=new L.Draw.Polygon(map,{
+        allowIntersection:false,
+        showArea:true,
+        shapeOptions:roleStyle(def.role)
+      });
+    } else {
+      const icon=pointIcon(def.role);
+      drawer=new L.Draw.Marker(map,icon?{icon}:{});
+    }
+    drawer.enable();
+    return true;
   }
 
   function init(containerId='anc-v3-map') {
@@ -412,6 +476,7 @@
     setExportScale,
     centerOnStudy,
     syncDrawnToState,
+    startDrawingRole,
     applyPreset,
     freezeCurrentMap,
     activeKind,
