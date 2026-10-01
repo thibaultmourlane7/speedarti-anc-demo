@@ -8,6 +8,9 @@
   let northControl = null;
   let infoControl = null;
   let pendingRole = null;
+  let activeDrawHandler = null;
+  let activeEditHandler = null;
+  let activeDeleteHandler = null;
 
   const getApi = () => window.SpeedArtiANC;
   const getState = () => getApi()?.getState?.();
@@ -232,6 +235,7 @@
 
     map.on(L.Draw.Event.CREATED,e=>{
       const role=pendingRole||document.getElementById('anc-map-role')?.value||'annotation';
+      activeDrawHandler=null;
       pendingRole=null;
       e.layer.options=e.layer.options||{};
       e.layer.options.ancRole=role;
@@ -243,31 +247,97 @@
       drawn.addLayer(e.layer);
       syncDrawnToState();
     });
-    map.on(L.Draw.Event.EDITED,syncDrawnToState);
-    map.on(L.Draw.Event.DELETED,syncDrawnToState);
+    map.on(L.Draw.Event.EDITED,()=>{
+      activeEditHandler=null;
+      syncDrawnToState();
+      setToolStatus('<b>Modification enregistrée.</b>','good');
+    });
+    map.on(L.Draw.Event.DELETED,()=>{
+      activeDeleteHandler=null;
+      syncDrawnToState();
+      setToolStatus('<b>Suppression enregistrée.</b>','good');
+    });
+  }
+
+  function setToolStatus(text,kind='info') {
+    const el=document.getElementById('anc-map-tool-status');
+    if(!el)return;
+    el.className='notice '+kind;
+    el.innerHTML=text;
+  }
+
+  function stopActiveTools({clearPending=true}={}) {
+    for(const handler of [activeDrawHandler,activeEditHandler,activeDeleteHandler]){
+      try{handler?.disable?.()}catch(_){}
+    }
+    activeDrawHandler=null;
+    activeEditHandler=null;
+    activeDeleteHandler=null;
+    if(clearPending)pendingRole=null;
   }
 
   function startDrawingRole(role) {
-    if(!map||!window.L?.Draw)return false;
+    if(!map||!window.L?.Draw){
+      setToolStatus('<b>Dessin indisponible.</b> Rechargez la page : Leaflet Draw n’est pas initialisé.','warn');
+      return false;
+    }
+    stopActiveTools();
     const def=roleDefinition(role);
     pendingRole=def.role;
     const select=document.getElementById('anc-map-role');
     if(select)select.value=def.role;
 
-    let drawer=null;
     if(def.geometry==='polyline') {
-      drawer=new L.Draw.Polyline(map,{shapeOptions:roleStyle(def.role)});
+      activeDrawHandler=new L.Draw.Polyline(map,{shapeOptions:roleStyle(def.role)});
     } else if(def.geometry==='polygon') {
-      drawer=new L.Draw.Polygon(map,{
+      activeDrawHandler=new L.Draw.Polygon(map,{
         allowIntersection:false,
         showArea:true,
         shapeOptions:roleStyle(def.role)
       });
     } else {
       const icon=pointIcon(def.role);
-      drawer=new L.Draw.Marker(map,icon?{icon}:{});
+      activeDrawHandler=new L.Draw.Marker(map,icon?{icon}:{});
     }
-    drawer.enable();
+    activeDrawHandler.enable();
+    const instruction=def.geometry==='point'
+      ?'Cliquez une fois sur la carte pour placer l’élément.'
+      :def.geometry==='polyline'
+        ?'Cliquez plusieurs points sur la carte, puis terminez la ligne.'
+        :'Cliquez les sommets de la zone, puis fermez le polygone.';
+    setToolStatus(`<b>Ajout : ${roleLabel(def.role)}</b><br>${instruction}`,'good');
+    return true;
+  }
+
+  function startEditMode() {
+    if(!map||!drawn||!window.L?.EditToolbar?.Edit)return false;
+    stopActiveTools();
+    if(!drawn.getLayers().length){
+      setToolStatus('<b>Aucun élément à modifier.</b> Ajoutez d’abord un élément sur la carte.','warn');
+      return false;
+    }
+    activeEditHandler=new L.EditToolbar.Edit(map,{featureGroup:drawn});
+    activeEditHandler.enable();
+    setToolStatus('<b>Mode modification actif.</b> Déplacez les points ou sommets, puis cliquez sur Enregistrer dans la barre de la carte.','good');
+    return true;
+  }
+
+  function startDeleteMode() {
+    if(!map||!drawn||!window.L?.EditToolbar?.Delete)return false;
+    stopActiveTools();
+    if(!drawn.getLayers().length){
+      setToolStatus('<b>Aucun élément à supprimer.</b>','warn');
+      return false;
+    }
+    activeDeleteHandler=new L.EditToolbar.Delete(map,{featureGroup:drawn});
+    activeDeleteHandler.enable();
+    setToolStatus('<b>Mode suppression actif.</b> Cliquez sur les éléments à retirer, puis validez.','warn');
+    return true;
+  }
+
+  function cancelMapTool() {
+    stopActiveTools();
+    setToolStatus('<b>Mode navigation.</b> Vous pouvez déplacer et zoomer la carte.','info');
     return true;
   }
 
@@ -488,6 +558,9 @@
     centerOnStudy,
     syncDrawnToState,
     startDrawingRole,
+    startEditMode,
+    startDeleteMode,
+    cancelMapTool,
     applyPreset,
     freezeCurrentMap,
     activeKind,
