@@ -107,9 +107,9 @@
     }, state.externalData || {});
 
     const defaultMapLayers = [
-      { id:'ign-plan', label:'Plan IGN', provider:'Géoplateforme IGN', type:'wms', visible:false, opacity:0.70, sourceScale:'multi-échelles', order:10 },
+      { id:'ign-plan', label:'Plan IGN', provider:'Géoplateforme IGN', type:'wms', visible:false, opacity:1, sourceScale:'multi-échelles', order:10 },
       { id:'ign-ortho', label:'Photographies aériennes', provider:'Géoplateforme IGN', type:'wms', visible:true, opacity:1, sourceScale:'orthophoto', order:20 },
-      { id:'ign-cadastre', label:'Parcelles cadastrales', provider:'Géoplateforme IGN', type:'wms', visible:true, opacity:0.72, sourceScale:'PCI', order:30 },
+      { id:'ign-cadastre', label:'Parcelles cadastrales', provider:'Géoplateforme IGN', type:'wms', visible:true, opacity:0.78, sourceScale:'PCI', order:30 },
       { id:'brgm-geology', label:'Carte géologique BRGM', provider:'BRGM / InfoTerre', type:'wms', visible:false, opacity:0.55, sourceScale:'1:50 000', order:40 },
       { id:'brgm-groundwater-sedim', label:'Remontée de nappe — domaine sédimentaire', provider:'BRGM / Géorisques', type:'wms', visible:false, opacity:0.55, sourceScale:'donnée nationale', order:50 },
       { id:'brgm-groundwater-socle', label:'Remontée de nappe — domaine de socle', provider:'BRGM / Géorisques', type:'wms', visible:false, opacity:0.55, sourceScale:'donnée nationale', order:51 },
@@ -125,6 +125,14 @@
         if(!current.has(def.id)) state.mapLayers.push(def);
       });
       state.mapLayers.sort((a,b)=>(a.order||0)-(b.order||0));
+    }
+
+    if((Number(state.v3.mapDisplayVersion)||0)<2){
+      const plan=state.mapLayers.find(x=>x.id==='ign-plan');
+      const cadastre=state.mapLayers.find(x=>x.id==='ign-cadastre');
+      if(plan)plan.opacity=1;
+      if(cadastre)cadastre.opacity=0.78;
+      state.v3.mapDisplayVersion=2;
     }
 
     state.mapFeatures = Array.isArray(state.mapFeatures) ? state.mapFeatures : [];
