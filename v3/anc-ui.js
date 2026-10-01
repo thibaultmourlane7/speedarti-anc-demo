@@ -338,6 +338,58 @@
     return true;
   }
 
+  function implantationObjects() {
+    return core()?.IMPLANTATION_OBJECTS || [];
+  }
+
+  function geometryLabel(type) {
+    return type==='polygon'?'zone':type==='polyline'?'ligne':'point';
+  }
+
+  function implantationRoleOptions() {
+    const groups=[
+      ['base','Plan de base'],
+      ['anc','ANC'],
+      ['water','Eau / points sensibles'],
+      ['vegetation','Végétation'],
+      ['layout','Aménagements'],
+      ['network','Réseaux'],
+      ['constraint','Contraintes'],
+      ['other','Autres']
+    ];
+    const objects=implantationObjects();
+    return groups.map(([key,label])=>{
+      const rows=objects.filter(o=>o.category===key);
+      if(!rows.length)return '';
+      return `<optgroup label="${esc(label)}">${rows.map(o=>`<option value="${esc(o.role)}">${o.icon?esc(o.icon)+' ':''}${esc(o.label)}</option>`).join('')}</optgroup>`;
+    }).join('');
+  }
+
+  function optionalImplantationPalette(s) {
+    const optional=core()?.optionalImplantationObjects?.()||[];
+    const optionalRoles=new Set(optional.map(o=>o.role));
+    const count=(s.mapFeatures||[]).filter(f=>optionalRoles.has(f.role||f.properties?.role)).length;
+    const categories=[
+      ['vegetation','Végétation'],
+      ['water','Eau / points sensibles'],
+      ['layout','Aménagements'],
+      ['network','Réseaux'],
+      ['constraint','Contraintes']
+    ];
+    const sections=categories.map(([key,label])=>{
+      const items=optional.filter(o=>o.category===key);
+      if(!items.length)return '';
+      return `<div class="anc-object-group"><strong>${esc(label)}</strong><div class="anc-object-buttons">${items.map(o=>`<button type="button" class="anc-object-option" data-role="${esc(o.role)}" title="Dessiner comme ${esc(geometryLabel(o.geometry))}"><span>${esc(o.icon||'＋')}</span><b>${esc(o.label)}</b><small>${esc(geometryLabel(o.geometry))}</small></button>`).join('')}</div></div>`;
+    }).join('');
+    return `<details id="anc-implantation-options" class="anc-object-palette" ${(s.mapView?.activeKind||'layout')==='layout'?'':'style="display:none"'}>
+      <summary>🌳 Éléments optionnels d’implantation <span>${count} placé(s)</span></summary>
+      <div class="anc-object-palette-body">
+        <div class="anc-source-note">Choisissez un élément : SpeedArti lance automatiquement le bon outil de dessin. Ces éléments restent facultatifs et apparaissent dans l’image figée du plan.</div>
+        ${sections}
+      </div>
+    </details>`;
+  }
+
   function mapPresetButtons(s) {
     const labels={
       location:'Situation',cadastral:'Cadastre',aerial:'Vue aérienne',flood:'Inondation',
@@ -396,12 +448,9 @@
         <div><div id="anc-v3-map"></div></div>
         <aside>
           <div class="field"><label>Objet à dessiner</label><select id="anc-map-role" class="select">
-            <option value="parcel">Parcelle</option><option value="available">Zone disponible ANC</option>
-            <option value="house">Bâtiment</option><option value="treatment">Filière ANC</option><option value="pipe">Canalisation</option>
-            <option value="borehole">Sondage</option><option value="porchet">Test Porchet</option><option value="well">Puits / captage</option>
-            <option value="outlet">Exutoire / fossé</option><option value="exclusion">Zone d’exclusion</option><option value="access">Accès</option>
-            <option value="tree">Arbre / végétation</option><option value="annotation">Annotation</option>
+            ${implantationRoleOptions()}
           </select></div>
+          ${optionalImplantationPalette(s)}
           <div class="field" style="margin-top:10px"><label>Échelle du plan / export</label><select id="anc-map-scale" class="select">
             ${[100,200,250,400,500,1000,2000,5000,25000,50000].map(x=>`<option value="${x}" ${Number(scale)===x?'selected':''}>1:${x.toLocaleString('fr-FR')}</option>`).join('')}
           </select></div>
@@ -411,6 +460,13 @@
         </aside>
       </div>`;
     section.insertAdjacentHTML('afterbegin',card('anc-v3-live-map','Carte de travail multicouche','Toutes les cartes du dossier utilisent maintenant les sources officielles et le même centre géographique.',body));
+
+    document.querySelectorAll('.anc-object-option').forEach(btn=>btn.addEventListener('click',e=>{
+      const role=e.currentTarget.dataset.role;
+      if(!window.ANCV3Map?.startDrawingRole?.(role)){
+        alert('L’outil de dessin n’est pas encore disponible. Rechargez la carte puis réessayez.');
+      }
+    }));
 
     document.getElementById('anc-connect-all-maps')?.addEventListener('click',e=>{
       if(!connectStudyMaps(s)){alert('Localisez d’abord le chantier depuis son adresse ou le GPS mobile.');return}
@@ -448,6 +504,8 @@
       });
       const scaleSelect=document.getElementById('anc-map-scale');
       if(scaleSelect&&item?.scale)scaleSelect.value=String(item.scale);
+      const optionalPalette=document.getElementById('anc-implantation-options');
+      if(optionalPalette)optionalPalette.style.display=kind==='layout'?'':'none';
       window.ANCV3Map?.applyPreset?.(kind);
       if(kind==='flood' && item?.connection?.externalUrl){
         const open=confirm('La carte interactive affiche la localisation et le statut Géorisques. Ouvrir aussi le rapport officiel Géorisques dans un nouvel onglet ?');
