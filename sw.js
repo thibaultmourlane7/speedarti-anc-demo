@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'speedarti-anc-v3-20260928-plan-metrique-freeze';
+const CACHE_VERSION = 'speedarti-anc-v3-20261001-implantation-options';
 const SHELL = [
   './',
   './index.html',
