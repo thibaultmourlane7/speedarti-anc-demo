@@ -464,10 +464,20 @@
       scale:effectiveScale,connectedAt:new Date().toISOString(),mode:src.mode
     };
     if(src.mode==='wms'){
-      base.imageUrl=wmsStaticMapUrl({
+      const overlayUrl=wmsStaticMapUrl({
         url:src.url,layers:src.layers,latitude,longitude,scale:effectiveScale,
         printWidthMm,transparent:!!src.transparent
       });
+      if(src.transparent){
+        const plan=registry.location;
+        base.previewBaseUrl=wmsStaticMapUrl({
+          url:plan.url,layers:plan.layers,latitude,longitude,scale:effectiveScale,printWidthMm
+        });
+        base.previewOverlayUrls=[overlayUrl];
+        base.imageUrl=overlayUrl;
+      }else{
+        base.imageUrl=overlayUrl;
+      }
       base.wms={url:src.url,layers:src.layers,opacity:src.opacity??1,transparent:!!src.transparent};
     }else if(src.mode==='georisques'){
       base.externalUrl=georisquesReportUrl({latitude,longitude});
@@ -480,20 +490,30 @@
       base.children=src.children||[];
       const first=base.children[0];
       if(first){
-        base.imageUrl=wmsStaticMapUrl({
+        const plan=registry.location;
+        base.previewBaseUrl=wmsStaticMapUrl({
+          url:plan.url,layers:plan.layers,latitude,longitude,scale:effectiveScale,printWidthMm
+        });
+        base.previewOverlayUrls=[wmsStaticMapUrl({
           url:first.url,
           layers:base.children.map(x=>x.layers).join(','),
-          latitude,longitude,scale:effectiveScale,printWidthMm,transparent:false
-        });
+          latitude,longitude,scale:effectiveScale,printWidthMm,transparent:true
+        })];
+        base.imageUrl=base.previewOverlayUrls[0];
       }
-      base.note='Carte interactive : couches BRGM/Géorisques superposables individuellement sur fond IGN.';
+      base.note='Aperçu : fond IGN + couches BRGM/Géorisques. Dans l’éditeur, les couches restent réglables séparément.';
     }else if(src.mode==='composite'){
       base.baseLayers=src.baseLayers||['aerial','cadastral'];
       const aerial=registry.aerial;
-      base.imageUrl=wmsStaticMapUrl({
+      const cadastral=registry.cadastral;
+      base.previewBaseUrl=wmsStaticMapUrl({
         url:aerial.url,layers:aerial.layers,latitude,longitude,scale:effectiveScale,printWidthMm
       });
-      base.note='Fond orthophoto connecté ; objets ANC et cadastre superposés dans l’éditeur interactif.';
+      base.previewOverlayUrls=[wmsStaticMapUrl({
+        url:cadastral.url,layers:cadastral.layers,latitude,longitude,scale:effectiveScale,printWidthMm,transparent:true
+      })];
+      base.imageUrl=base.previewBaseUrl;
+      base.note='Aperçu : orthophoto + cadastre. Les objets ANC apparaissent dans l’image figée après capture de l’éditeur.';
     }
     return base;
   }
