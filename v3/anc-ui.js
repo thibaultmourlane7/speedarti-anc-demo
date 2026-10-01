@@ -434,7 +434,23 @@
           :' — localisez d’abord le chantier pour charger les sources officielles.'}
       </div>
       <div class="notice info" style="margin-bottom:12px">
-        <b>Un seul éditeur :</b> l’implantation ANC et le calcul métrique utilisent cette même carte. Changez simplement de vue ou de calque, dessinez et mesurez ici.
+        <b>Un seul éditeur :</b> l’implantation ANC et le calcul métrique utilisent cette même carte. Dans la vue <b>Implantation ANC</b>, utilisez les boutons ci-dessous pour placer directement les éléments.
+      </div>
+      <div id="anc-implantation-toolbar" class="anc-implantation-toolbar" ${(activeKind==='layout')?'':'style="display:none"'}>
+        <div class="anc-toolbar-title"><b>✏️ Implantation ANC</b><span>Choisissez un élément puis dessinez directement sur la carte.</span></div>
+        <div class="anc-main-object-buttons">
+          <button type="button" class="btn secondary anc-draw-role" data-role="house">🏠 Bâtiment</button>
+          <button type="button" class="btn primary anc-draw-role" data-role="treatment">🟦 Filière ANC</button>
+          <button type="button" class="btn secondary anc-draw-role" data-role="pipe">➖ Canalisation</button>
+          <button type="button" class="btn secondary anc-draw-role" data-role="borehole">📍 Sondage</button>
+          <button type="button" class="btn secondary anc-draw-role" data-role="porchet">🧪 Porchet</button>
+        </div>
+        <div class="anc-edit-buttons">
+          <button type="button" class="btn secondary" id="anc-map-edit">✋ Modifier les éléments</button>
+          <button type="button" class="btn danger" id="anc-map-delete">🗑 Supprimer des éléments</button>
+          <button type="button" class="btn ghost" id="anc-map-cancel">✕ Annuler le mode</button>
+        </div>
+        <div id="anc-map-tool-status" class="notice info"><b>Mode navigation.</b> Choisissez un élément à placer.</div>
       </div>
       <div class="anc-v3-toolbar" style="margin-bottom:10px">
         <button class="btn secondary" type="button" id="anc-connect-all-maps">🔌 Actualiser toutes les cartes</button>
@@ -447,7 +463,8 @@
       <div class="anc-map-grid">
         <div><div id="anc-v3-map"></div></div>
         <aside>
-          <div class="field"><label>Objet à dessiner</label><select id="anc-map-role" class="select">
+          <div class="field"><label>Objet à dessiner — choisir lance le dessin</label><select id="anc-map-role" class="select">
+            <option value="" selected>Choisir un objet…</option>
             ${implantationRoleOptions()}
           </select></div>
           ${optionalImplantationPalette(s)}
@@ -460,6 +477,20 @@
         </aside>
       </div>`;
     section.insertAdjacentHTML('afterbegin',card('anc-v3-live-map','Carte de travail multicouche','Toutes les cartes du dossier utilisent maintenant les sources officielles et le même centre géographique.',body));
+
+    document.querySelectorAll('.anc-draw-role').forEach(btn=>btn.addEventListener('click',e=>{
+      const role=e.currentTarget.dataset.role;
+      if(!window.ANCV3Map?.startDrawingRole?.(role)){
+        alert('L’outil de dessin n’est pas disponible. Rechargez la page puis réessayez.');
+      }
+    }));
+    document.getElementById('anc-map-role')?.addEventListener('change',e=>{
+      const role=e.target.value;
+      if(role)window.ANCV3Map?.startDrawingRole?.(role);
+    });
+    document.getElementById('anc-map-edit')?.addEventListener('click',()=>window.ANCV3Map?.startEditMode?.());
+    document.getElementById('anc-map-delete')?.addEventListener('click',()=>window.ANCV3Map?.startDeleteMode?.());
+    document.getElementById('anc-map-cancel')?.addEventListener('click',()=>window.ANCV3Map?.cancelMapTool?.());
 
     document.querySelectorAll('.anc-object-option').forEach(btn=>btn.addEventListener('click',e=>{
       const role=e.currentTarget.dataset.role;
@@ -506,6 +537,9 @@
       if(scaleSelect&&item?.scale)scaleSelect.value=String(item.scale);
       const optionalPalette=document.getElementById('anc-implantation-options');
       if(optionalPalette)optionalPalette.style.display=kind==='layout'?'':'none';
+      const implantationToolbar=document.getElementById('anc-implantation-toolbar');
+      if(implantationToolbar)implantationToolbar.style.display=kind==='layout'?'':'none';
+      if(kind!=='layout')window.ANCV3Map?.cancelMapTool?.();
       window.ANCV3Map?.applyPreset?.(kind);
       if(kind==='flood' && item?.connection?.externalUrl){
         const open=confirm('La carte interactive affiche la localisation et le statut Géorisques. Ouvrir aussi le rapport officiel Géorisques dans un nouvel onglet ?');
