@@ -417,6 +417,23 @@
     riskMarker.addTo(map);
   }
 
+  function refreshLayerControls() {
+    const state=getState();
+    for(const cfg of state?.mapLayers||[]){
+      const checkbox=document.querySelector(`.anc-layer-visible[data-layer="${cfg.id}"]`);
+      if(checkbox)checkbox.checked=!!cfg.visible;
+      const range=document.querySelector(`.anc-layer-opacity[data-layer="${cfg.id}"]`);
+      if(range)range.value=String(Math.round((Number(cfg.opacity??1))*100));
+    }
+  }
+
+  function updateSourceStatus(message,kind='good') {
+    const el=document.getElementById('anc-map-source-status');
+    if(!el)return;
+    el.className='notice '+kind;
+    el.innerHTML=message;
+  }
+
   function setManyVisibility(visibleIds=[]) {
     const allowed=new Set(visibleIds);
     layers.forEach((entry,id)=>{
@@ -429,6 +446,7 @@
       if(cfg.id==='anc-objects')return;
       cfg.visible=allowed.has(cfg.id);
     });
+    refreshLayerControls();
     getApi()?.save?.();
   }
 
@@ -446,6 +464,7 @@
   function applyPreset(kind) {
     if(!map)return;
     clearRiskMarker();
+    updateSourceStatus('<b>Chargement de la carte…</b> Les fonds et surcouches officielles sont en cours d’affichage.','info');
     const state=getState();
     if(state?.mapView)state.mapView.activeKind=kind;
     const presets={
@@ -484,6 +503,8 @@
       map.setView([lat,lng],zoomForScale(item?.scale||state?.mapView?.exportScale));
     }
     setTimeout(()=>map?.invalidateSize?.({pan:false}),80);
+    setTimeout(()=>updateSourceStatus('<b>Carte prête.</b> Si une zone reste blanche, désactivez/réactivez la couche concernée ou changez légèrement de zoom.','good'),500);
+    refreshLayerControls();
     getApi()?.save?.();
     refreshInfo();
   }
@@ -553,11 +574,22 @@
   function setLayerVisible(id,visible) {
     const x=layers.get(id);
     if(!map||!x) return;
+    const state=getState();
+
+    if(visible && x.baseLayer){
+      layers.forEach((entry,otherId)=>{
+        if(otherId===id||!entry.baseLayer)return;
+        if(map.hasLayer(entry.layer))map.removeLayer(entry.layer);
+        const otherCfg=state?.mapLayers?.find(l=>l.id===otherId);
+        if(otherCfg)otherCfg.visible=false;
+      });
+    }
+
     if(visible && !map.hasLayer(x.layer)) x.layer.addTo(map);
     if(!visible && map.hasLayer(x.layer)) map.removeLayer(x.layer);
-    const state=getState();
     const cfg=state?.mapLayers?.find(l=>l.id===id);
     if(cfg) cfg.visible=!!visible;
+    refreshLayerControls();
     getApi()?.save?.();
   }
 
