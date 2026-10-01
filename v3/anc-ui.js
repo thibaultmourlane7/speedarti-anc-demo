@@ -460,6 +460,7 @@
         <button class="btn primary" type="button" id="anc-freeze-map">${frozen?'🔄 Mettre à jour l’image figée':'📌 Figer l’image dans le dossier'}</button>
         ${frozen?`<span class="anc-v3-status CONFIRMED">Image figée v${Number(activeMap.snapshotVersion)||1}</span><span class="anc-source-note">Dernière mise à jour : ${esc(frozenAt)}</span>`:''}
       </div>
+      <div id="anc-map-source-status" class="notice info" style="margin-bottom:12px"><b>Sources cartographiques :</b> le chargement démarre à l’ouverture de la vue.</div>
       <div class="anc-map-grid">
         <div><div id="anc-v3-map"></div></div>
         <aside>
