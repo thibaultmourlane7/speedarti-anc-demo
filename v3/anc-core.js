@@ -13,6 +13,47 @@
   const uid = (p='id') => `${p}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`;
   const n = v => (v === '' || v === null || v === undefined || Number.isNaN(Number(v))) ? undefined : Number(v);
 
+  const IMPLANTATION_OBJECTS = Object.freeze([
+    { role:'parcel', label:'Parcelle', category:'base', geometry:'polygon', optional:false },
+    { role:'available', label:'Zone disponible ANC', category:'base', geometry:'polygon', optional:false },
+    { role:'house', label:'Bâtiment', category:'anc', geometry:'polygon', optional:false },
+    { role:'treatment', label:'Filière ANC', category:'anc', geometry:'polygon', optional:false },
+    { role:'pipe', label:'Canalisation', category:'anc', geometry:'polyline', optional:false },
+    { role:'borehole', label:'Sondage', category:'anc', geometry:'point', optional:false },
+    { role:'porchet', label:'Test Porchet', category:'anc', geometry:'point', optional:false },
+    { role:'well', label:'Puits / captage', category:'water', geometry:'point', optional:true, icon:'💧' },
+    { role:'pond', label:'Mare / bassin', category:'water', geometry:'polygon', optional:true, icon:'🌊' },
+    { role:'ditch', label:'Fossé', category:'water', geometry:'polyline', optional:true, icon:'〰️' },
+    { role:'watercourse', label:'Cours d’eau', category:'water', geometry:'polyline', optional:true, icon:'🌊' },
+    { role:'outlet', label:'Exutoire', category:'water', geometry:'point', optional:true, icon:'↘' },
+    { role:'tree', label:'Arbre', category:'vegetation', geometry:'point', optional:true, icon:'🌳' },
+    { role:'shrub', label:'Buisson / arbuste', category:'vegetation', geometry:'point', optional:true, icon:'🌿' },
+    { role:'hedge', label:'Haie', category:'vegetation', geometry:'polyline', optional:true, icon:'🌿' },
+    { role:'fence', label:'Clôture', category:'layout', geometry:'polyline', optional:true, icon:'│' },
+    { role:'wall', label:'Mur', category:'layout', geometry:'polyline', optional:true, icon:'▰' },
+    { role:'terrace', label:'Terrasse', category:'layout', geometry:'polygon', optional:true, icon:'▦' },
+    { role:'annex', label:'Annexe / cabanon', category:'layout', geometry:'polygon', optional:true, icon:'⌂' },
+    { role:'access', label:'Accès / voirie', category:'layout', geometry:'polyline', optional:true, icon:'↔' },
+    { role:'manhole', label:'Regard', category:'network', geometry:'point', optional:true, icon:'◉' },
+    { role:'network', label:'Réseau existant', category:'network', geometry:'polyline', optional:true, icon:'⚡' },
+    { role:'exclusion', label:'Zone d’exclusion', category:'constraint', geometry:'polygon', optional:true, icon:'⚠' },
+    { role:'annotation', label:'Annotation', category:'other', geometry:'point', optional:true, icon:'✎' }
+  ]);
+
+  function implantationObjectDefinition(role) {
+    return IMPLANTATION_OBJECTS.find(x=>x.role===role) || {
+      role:role||'annotation',
+      label:role||'Objet ANC',
+      category:'other',
+      geometry:'point',
+      optional:true
+    };
+  }
+
+  function optionalImplantationObjects() {
+    return IMPLANTATION_OBJECTS.filter(x=>x.optional);
+  }
+
   function parcelTemplate(index=1) {
     return {
       id: uid('parcel'),
@@ -314,6 +355,9 @@
     finalChecks,
     mapMetricSummary,
     haversineM,
-    geometryRepresentativePoint
+    geometryRepresentativePoint,
+    IMPLANTATION_OBJECTS,
+    implantationObjectDefinition,
+    optionalImplantationObjects
   };
 })();
