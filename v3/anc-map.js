@@ -11,6 +11,7 @@
   let activeDrawHandler = null;
   let activeEditHandler = null;
   let activeDeleteHandler = null;
+  let resizeObserver = null;
 
   const getApi = () => window.SpeedArtiANC;
   const getState = () => getApi()?.getState?.();
@@ -146,19 +147,32 @@
     return out;
   }
 
-  function addWms(id,label,url,layerName,opacity,visible,attribution,transparent=true) {
+  function addWms(id,label,url,layerName,opacity,visible,attribution,transparent=true,options={}) {
     if(!map || !window.L) return;
-    const layer=L.tileLayer.wms(url,{
+    const isBrgm=/geoservices\.brgm\.fr/i.test(url);
+    const baseLayer=options.base===true;
+    const wmsOptions={
       layers:layerName,
       format:'image/png',
       transparent:transparent!==false,
-      version:'1.3.0',
+      version:isBrgm?'1.1.1':'1.3.0',
       opacity:opacity,
       attribution:attribution||label,
       crossOrigin:'anonymous',
-      maxZoom:21
+      maxZoom:21,
+      pane:baseLayer?'anc-base-pane':'anc-data-pane',
+      zIndex:baseLayer?200:360
+    };
+    if(isBrgm && L.CRS?.EPSG4326)wmsOptions.crs=L.CRS.EPSG4326;
+    const layer=L.tileLayer.wms(url,wmsOptions);
+    layer.on('tileerror',()=>{
+      const el=document.getElementById('anc-map-source-status');
+      if(el){
+        el.className='notice warn';
+        el.innerHTML='<b>Une couche cartographique n’a pas pu être chargée.</b> Essayez un autre niveau de zoom ou rechargez la source.';
+      }
     });
-    layers.set(id,{id,label,layer});
+    layers.set(id,{id,label,layer,baseLayer});
     if(visible) layer.addTo(map);
   }
 
@@ -168,9 +182,9 @@
 
   function registerOfficialLayers() {
     const cfg=id=>layerConfig(id);
-    addWms('ign-plan','Plan IGN','https://data.geopf.fr/wms-r/wms','GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2',cfg('ign-plan').opacity??0.70,!!cfg('ign-plan').visible,'IGN — cartes.gouv.fr',false);
-    addWms('ign-ortho','Photographies aériennes','https://data.geopf.fr/wms-r/wms','ORTHOIMAGERY.ORTHOPHOTOS',cfg('ign-ortho').opacity??1,!!cfg('ign-ortho').visible,'IGN — Photographies aériennes',false);
-    addWms('ign-cadastre','Parcelles cadastrales','https://data.geopf.fr/wms-r/wms','CADASTRALPARCELS.PARCELLAIRE_EXPRESS',cfg('ign-cadastre').opacity??0.72,!!cfg('ign-cadastre').visible,'IGN — Parcellaire Express',true);
+    addWms('ign-plan','Plan IGN','https://data.geopf.fr/wms-r/wms','GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2',cfg('ign-plan').opacity??1,!!cfg('ign-plan').visible,'IGN — cartes.gouv.fr',false,{base:true});
+    addWms('ign-ortho','Photographies aériennes','https://data.geopf.fr/wms-r/wms','ORTHOIMAGERY.ORTHOPHOTOS',cfg('ign-ortho').opacity??1,!!cfg('ign-ortho').visible,'IGN — Photographies aériennes',false,{base:true});
+    addWms('ign-cadastre','Parcelles cadastrales','https://data.geopf.fr/wms-r/wms','CADASTRALPARCELS.PARCELLAIRE_EXPRESS',cfg('ign-cadastre').opacity??0.78,!!cfg('ign-cadastre').visible,'IGN — Parcellaire Express',true,{base:false});
     addWms('brgm-geology','Géologie BRGM 1:50 000','https://geoservices.brgm.fr/geologie','SCAN_D_GEOL50',cfg('brgm-geology').opacity??0.55,!!cfg('brgm-geology').visible,'BRGM / InfoTerre — 1:50 000',true);
     addWms('brgm-groundwater-sedim','Remontée de nappe — sédimentaire','https://geoservices.brgm.fr/risques','REM_NAPPE_SEDIM',cfg('brgm-groundwater-sedim').opacity??0.55,!!cfg('brgm-groundwater-sedim').visible,'BRGM / Géorisques',true);
     addWms('brgm-groundwater-socle','Remontée de nappe — socle','https://geoservices.brgm.fr/risques','REM_NAPPE_SOCLE',cfg('brgm-groundwater-socle').opacity??0.55,!!cfg('brgm-groundwater-socle').visible,'BRGM / Géorisques',true);
@@ -351,6 +365,10 @@
     const lat=Number(state.parcel?.lat)||44.0;
     const lng=Number(state.parcel?.lng)||1.35;
     map=L.map(el,{zoomControl:true,preferCanvas:true}).setView([lat,lng],19);
+    map.createPane('anc-base-pane');
+    map.getPane('anc-base-pane').style.zIndex='200';
+    map.createPane('anc-data-pane');
+    map.getPane('anc-data-pane').style.zIndex='360';
 
     registerOfficialLayers();
 
@@ -368,6 +386,14 @@
     refreshOptionalObjectCount();
 
     map.on('moveend zoomend',refreshInfo);
+
+    if(resizeObserver){try{resizeObserver.disconnect()}catch(_){}}
+    if(window.ResizeObserver){
+      resizeObserver=new ResizeObserver(()=>map?.invalidateSize?.({pan:false}));
+      resizeObserver.observe(el);
+    }
+    setTimeout(()=>map?.invalidateSize?.({pan:false}),80);
+    setTimeout(()=>map?.invalidateSize?.({pan:false}),300);
     return true;
   }
 
@@ -438,7 +464,26 @@
     if(kind==='flood')addFloodStatusMarker();
     const item=(state?.maps||[]).find(m=>m.kind===kind);
     const lat=Number(state?.parcel?.lat),lng=Number(state?.parcel?.lng);
-    if(Number.isFinite(lat)&&Number.isFinite(lng))map.setView([lat,lng],zoomForScale(item?.scale||state?.mapView?.exportScale));
+    let fitted=false;
+    if(['layout','investigation','trenches'].includes(kind) && drawn){
+      const workLayers=[];
+      drawn.eachLayer(layer=>{
+        const role=layer.options?.ancRole||layer.feature?.properties?.role;
+        if(role==='parcel'||role==='available')workLayers.push(layer);
+      });
+      if(workLayers.length){
+        const group=L.featureGroup(workLayers);
+        const bounds=group.getBounds();
+        if(bounds?.isValid?.()){
+          map.fitBounds(bounds,{padding:[28,28],maxZoom:20});
+          fitted=true;
+        }
+      }
+    }
+    if(!fitted && Number.isFinite(lat)&&Number.isFinite(lng)){
+      map.setView([lat,lng],zoomForScale(item?.scale||state?.mapView?.exportScale));
+    }
+    setTimeout(()=>map?.invalidateSize?.({pan:false}),80);
     getApi()?.save?.();
     refreshInfo();
   }
