@@ -13,3 +13,21 @@
 .anc-source-note{font-size:10px;color:#66788d;line-height:1.45;margin-top:8px}.anc-metric-chip{display:inline-flex;padding:4px 7px;border-radius:999px;background:#eef5fb;color:#31506d;font-size:9px;font-weight:800;margin:2px}
 @media(max-width:900px){.anc-map-grid{grid-template-columns:1fr}.anc-v3-parcel{grid-template-columns:1fr 1fr}.anc-v3-parcel .wide{grid-column:span 2}#anc-v3-map{height:500px}}
 @media(max-width:600px){.anc-v3-parcel{grid-template-columns:1fr}.anc-v3-parcel .wide{grid-column:auto}#anc-v3-map{height:420px}.anc-review-row{grid-template-columns:1fr}.anc-map-info{max-width:170px}}
+.anc-object-palette{margin-top:12px;border:1px solid #d8e4ee;border-radius:12px;background:#fbfdff;overflow:hidden}
+.anc-object-palette>summary{cursor:pointer;list-style:none;padding:11px 12px;font-size:11px;font-weight:900;color:#294763;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.anc-object-palette>summary::-webkit-details-marker{display:none}
+.anc-object-palette>summary:after{content:'＋';font-size:16px;color:#66788d}
+.anc-object-palette[open]>summary:after{content:'−'}
+.anc-object-palette>summary span{margin-left:auto;font-size:9px;font-weight:800;color:#66788d}
+.anc-object-palette-body{border-top:1px solid #e5edf3;padding:10px}
+.anc-object-group{margin-top:12px}.anc-object-group:first-of-type{margin-top:8px}
+.anc-object-group>strong{display:block;font-size:10px;color:#516b84;margin-bottom:6px}
+.anc-object-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.anc-object-option{border:1px solid #d5e2ec;background:#fff;border-radius:10px;padding:7px 8px;display:grid;grid-template-columns:28px 1fr;grid-template-rows:auto auto;text-align:left;cursor:pointer;align-items:center;column-gap:7px;min-width:0}
+.anc-object-option:hover{border-color:#80b7e8;box-shadow:0 3px 10px rgba(31,64,98,.08)}
+.anc-object-option>span{grid-row:1/3;font-size:20px;line-height:1;text-align:center}
+.anc-object-option>b{font-size:10px;color:#294763;white-space:normal}
+.anc-object-option>small{font-size:8px;color:#7a8b9c;text-transform:uppercase;font-weight:800}
+.anc-map-object-icon{background:transparent!important;border:0!important}
+.anc-map-object-icon span{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.94);border:1px solid rgba(41,71,99,.35);box-shadow:0 2px 7px rgba(0,0,0,.22);display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1}
+@media(max-width:600px){.anc-object-buttons{grid-template-columns:1fr}.anc-object-palette>summary{font-size:10px}.anc-object-option{padding:9px}}
