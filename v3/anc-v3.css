@@ -31,3 +31,15 @@
 .anc-map-object-icon{background:transparent!important;border:0!important}
 .anc-map-object-icon span{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.94);border:1px solid rgba(41,71,99,.35);box-shadow:0 2px 7px rgba(0,0,0,.22);display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1}
 @media(max-width:600px){.anc-object-buttons{grid-template-columns:1fr}.anc-object-palette>summary{font-size:10px}.anc-object-option{padding:9px}}
+
+.anc-implantation-toolbar{border:1px solid #c8dceb;border-radius:14px;background:#f7fbff;padding:12px;margin:0 0 12px}
+.anc-toolbar-title{display:flex;flex-direction:column;gap:3px;margin-bottom:9px;color:#244862}
+.anc-toolbar-title>b{font-size:13px}.anc-toolbar-title>span{font-size:10px;color:#66788d}
+.anc-main-object-buttons,.anc-edit-buttons{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px}
+.anc-main-object-buttons .btn,.anc-edit-buttons .btn{min-height:38px}
+#anc-map-tool-status{margin:8px 0 0;font-size:10px}
+@media(max-width:600px){
+  .anc-main-object-buttons,.anc-edit-buttons{display:grid;grid-template-columns:1fr 1fr}
+  .anc-main-object-buttons .btn,.anc-edit-buttons .btn{width:100%;font-size:10px;padding:9px 7px}
+  #anc-map-cancel{grid-column:1/-1}
+}
