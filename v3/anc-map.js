@@ -99,6 +99,15 @@
     };
   }
 
+  function refreshOptionalObjectCount() {
+    const state=getState();
+    const el=document.querySelector('#anc-implantation-options>summary span');
+    if(!state||!el)return;
+    const roles=new Set((window.ANCV3Core?.optionalImplantationObjects?.()||[]).map(x=>x.role));
+    const count=(state.mapFeatures||[]).filter(f=>roles.has(f.role||f.properties?.role)).length;
+    el.textContent=`${count} placé(s)`;
+  }
+
   function syncDrawnToState() {
     const state=getState();
     if(!state || !drawn) return;
@@ -108,6 +117,7 @@
     state.mapFeatures=features;
     getApi()?.save?.();
     refreshInfo();
+    refreshOptionalObjectCount();
   }
 
   function layerFromFeature(feature) {
@@ -285,6 +295,7 @@
     addInfoControl();
     addDrawControl();
     refreshInfo();
+    refreshOptionalObjectCount();
 
     map.on('moveend zoomend',refreshInfo);
     return true;
