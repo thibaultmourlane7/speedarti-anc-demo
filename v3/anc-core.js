@@ -57,6 +57,119 @@
     return {passed:Math.abs(kMmH-equivalent)<1e-12,areaMm2,kMmH,equivalent};
   }
 
+
+  function calculateTreatedEffluentInfiltration(input={}) {
+    const warnings=[];
+    const warn=(severity,code,message)=>warnings.push({severity,code,message});
+    const eh=n(input.eh);
+    const consumptionLDayPerEh=n(input.consumptionLDayPerEh);
+    const peakCoefficient=n(input.peakCoefficient);
+    const operatingHoursPerDay=n(input.operatingHoursPerDay);
+    const permeabilityMmH=n(input.permeabilityMmH);
+    const safetyCoefficient=n(input.safetyCoefficient);
+    const trenchWidthM=n(input.trenchWidthM);
+    const trenchDepthM=n(input.trenchDepthM);
+    const trenchSpacingM=n(input.trenchSpacingM);
+    const trenchCount=n(input.trenchCount);
+    const adoptedTotalLengthM=n(input.adoptedTotalLengthM);
+    const availableAreaM2=n(input.availableAreaM2);
+    const minPermeabilityMmH=n(input.minPermeabilityMmH);
+    const maxPermeabilityMmH=n(input.maxPermeabilityMmH);
+
+    if(!(eh>0)) warn('BLOCKING','MISSING_EH','EH manquant ou invalide.');
+    if(!(consumptionLDayPerEh>0)) warn('BLOCKING','MISSING_CONSUMPTION','Consommation journalière par EH manquante ou invalide.');
+    if(!(peakCoefficient>0)) warn('BLOCKING','MISSING_PEAK_COEFFICIENT','Coefficient de pointe manquant ou invalide.');
+    if(!(operatingHoursPerDay>0)) warn('BLOCKING','MISSING_OPERATING_HOURS','Heures de fonctionnement/consommation manquantes ou invalides.');
+    if(!(permeabilityMmH>0)) warn('BLOCKING','MISSING_PERMEABILITY','Perméabilité K manquante ou invalide.');
+    if(!(safetyCoefficient>0)) warn('BLOCKING','MISSING_SAFETY_COEFFICIENT','Coefficient de sécurité manquant ou invalide.');
+    if(!(trenchWidthM>0)) warn('BLOCKING','MISSING_TRENCH_WIDTH','Largeur de tranchée manquante ou invalide.');
+    if(!(trenchCount>0) || !Number.isInteger(trenchCount)) warn('BLOCKING','INVALID_TRENCH_COUNT','Le nombre de tranchées doit être un entier positif.');
+
+    const required=[eh,consumptionLDayPerEh,peakCoefficient,operatingHoursPerDay,permeabilityMmH,safetyCoefficient,trenchWidthM,trenchCount];
+    if(required.some(v=>!(v>0)) || !Number.isInteger(trenchCount)) {
+      return {
+        status:'INCOMPLETE',
+        warnings,
+        inputs:{eh,consumptionLDayPerEh,peakCoefficient,operatingHoursPerDay,permeabilityMmH,safetyCoefficient,trenchWidthM,trenchDepthM,trenchSpacingM,trenchCount,adoptedTotalLengthM,availableAreaM2,minPermeabilityMmH,maxPermeabilityMmH}
+      };
+    }
+
+    const dailyVolumeL=eh*consumptionLDayPerEh;
+    const correctedDailyVolumeL=dailyVolumeL*peakCoefficient;
+    const designHourlyFlowL=correctedDailyVolumeL/operatingHoursPerDay;
+    const requiredAreaM2=(designHourlyFlowL/permeabilityMmH)*safetyCoefficient;
+    const exactTotalLengthM=requiredAreaM2/trenchWidthM;
+    const exactLengthPerTrenchM=exactTotalLengthM/trenchCount;
+    const wholeMeterCeilTotalLengthM=Math.ceil(exactTotalLengthM);
+    const wholeMeterCeilLengthPerTrenchM=wholeMeterCeilTotalLengthM/trenchCount;
+    const actualAreaM2=adoptedTotalLengthM===undefined?undefined:adoptedTotalLengthM*trenchWidthM;
+    const safetyMarginM2=actualAreaM2===undefined?undefined:actualAreaM2-requiredAreaM2;
+    const safetyMarginPct=actualAreaM2===undefined?undefined:(safetyMarginM2/requiredAreaM2)*100;
+
+    if(minPermeabilityMmH!==undefined && permeabilityMmH<minPermeabilityMmH) {
+      warn('BLOCKING','K_BELOW_MINIMUM',`K (${permeabilityMmH} mm/h) est inférieur au seuil d'infiltration paramétré (${minPermeabilityMmH} mm/h).`);
+    }
+    if(maxPermeabilityMmH!==undefined && permeabilityMmH>maxPermeabilityMmH) {
+      warn('WARNING','K_ABOVE_MAXIMUM',`K (${permeabilityMmH} mm/h) dépasse le seuil supérieur paramétré (${maxPermeabilityMmH} mm/h).`);
+    }
+    if(availableAreaM2!==undefined && requiredAreaM2>availableAreaM2) {
+      warn('BLOCKING','PARCEL_AREA_INSUFFICIENT','La surface d’infiltration nécessaire dépasse la surface ANC disponible renseignée.');
+    }
+    if(adoptedTotalLengthM===undefined) {
+      warn('TO_CONFIRM','LENGTH_NOT_ADOPTED','La longueur calculée est informative : une longueur retenue doit être validée par le professionnel.');
+    } else if(actualAreaM2+1e-9<requiredAreaM2) {
+      warn('BLOCKING','DIMENSIONING_INCONSISTENCY','Incohérence de dimensionnement détectée — la surface réellement obtenue est inférieure à la surface nécessaire. Validation professionnelle requise.');
+    }
+    if(trenchDepthM!==undefined && trenchDepthM<=0) warn('BLOCKING','INVALID_TRENCH_DEPTH','Profondeur de tranchée invalide.');
+    if(trenchSpacingM!==undefined && trenchSpacingM<=0) warn('BLOCKING','INVALID_TRENCH_SPACING','Espacement de tranchée invalide.');
+
+    return {
+      status:'CALCULATED',
+      inputs:{eh,consumptionLDayPerEh,peakCoefficient,operatingHoursPerDay,permeabilityMmH,safetyCoefficient,trenchWidthM,trenchDepthM,trenchSpacingM,trenchCount,adoptedTotalLengthM,availableAreaM2,minPermeabilityMmH,maxPermeabilityMmH},
+      dailyVolumeL,
+      correctedDailyVolumeL,
+      designHourlyFlowL,
+      requiredAreaM2,
+      exactTotalLengthM,
+      exactLengthPerTrenchM,
+      wholeMeterCeilTotalLengthM,
+      wholeMeterCeilLengthPerTrenchM,
+      actualAreaM2,
+      safetyMarginM2,
+      safetyMarginPct,
+      warnings
+    };
+  }
+
+  function infiltrationSizingSelfTest() {
+    const result=calculateTreatedEffluentInfiltration({
+      eh:5,
+      consumptionLDayPerEh:120,
+      peakCoefficient:2.5,
+      operatingHoursPerDay:16,
+      permeabilityMmH:45,
+      safetyCoefficient:4,
+      trenchWidthM:.7,
+      trenchDepthM:.4,
+      trenchSpacingM:3,
+      trenchCount:1,
+      adoptedTotalLengthM:12,
+      minPermeabilityMmH:10,
+      maxPermeabilityMmH:500
+    });
+    return {
+      passed:
+        result.status==='CALCULATED' &&
+        Math.abs(result.dailyVolumeL-600)<1e-9 &&
+        Math.abs(result.correctedDailyVolumeL-1500)<1e-9 &&
+        Math.abs(result.requiredAreaM2-(25/3))<1e-9 &&
+        result.wholeMeterCeilTotalLengthM===12 &&
+        result.actualAreaM2===8.4 &&
+        !result.warnings.some(w=>w.code==='DIMENSIONING_INCONSISTENCY'),
+      result
+    };
+  }
+
   const IMPLANTATION_OBJECTS = Object.freeze([
     { role:'parcel', label:'Parcelle', category:'base', geometry:'polygon', optional:false },
     { role:'available', label:'Zone disponible ANC', category:'base', geometry:'polygon', optional:false },
@@ -401,6 +514,8 @@
     porchetKFromGraphicalFlow,
     porchetReadingVolumeMl,
     porchetEngineSelfTest,
+    calculateTreatedEffluentInfiltration,
+    infiltrationSizingSelfTest,
     ensureV3,
     parcelTemplate,
     selectedParcels,
