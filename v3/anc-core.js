@@ -13,6 +13,50 @@
   const uid = (p='id') => `${p}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`;
   const n = v => (v === '' || v === null || v === undefined || Number.isNaN(Number(v))) ? undefined : Number(v);
 
+  function porchetWettedAreaMm2(diameterMm, waterHeightMm) {
+    const d=n(diameterMm), h=n(waterHeightMm);
+    if(!(d>0) || !(h>=0)) return undefined;
+    const r=d/2;
+    return Math.PI*r*r + 2*Math.PI*r*h;
+  }
+
+  function porchetVolumeFromGraduation(initialGraduation, currentGraduation, mlPerGraduation) {
+    const initial=n(initialGraduation), current=n(currentGraduation), factor=n(mlPerGraduation);
+    if(initial===undefined || current===undefined || !(factor>0)) return undefined;
+    const delta=initial-current;
+    if(delta<0) return undefined;
+    return delta*factor;
+  }
+
+  function porchetKFromVolume(volumeMl, durationMin, diameterMm, waterHeightMm) {
+    const volume=n(volumeMl), duration=n(durationMin);
+    const surfaceMm2=porchetWettedAreaMm2(diameterMm,waterHeightMm);
+    if(!(volume>=0) || !(duration>0) || !surfaceMm2) return undefined;
+    return (6*10**4*volume)/(surfaceMm2*duration);
+  }
+
+  function porchetKFromGraphicalFlow(flowMlMin, diameterMm, waterHeightMm) {
+    const flow=n(flowMlMin);
+    const surfaceMm2=porchetWettedAreaMm2(diameterMm,waterHeightMm);
+    if(!(flow>=0) || !surfaceMm2) return undefined;
+    return (flow*6*10**4)/surfaceMm2;
+  }
+
+  function porchetReadingVolumeMl(test, reading) {
+    if(test?.inputMode==='graduation') {
+      return porchetVolumeFromGraduation(test.initialGraduation,reading?.graduation,test.mlPerGraduation);
+    }
+    return n(reading?.volumeMl);
+  }
+
+  function porchetEngineSelfTest() {
+    const diameterMm=150, waterHeightMm=150, volumeMl=25, durationMin=5;
+    const areaMm2=porchetWettedAreaMm2(diameterMm,waterHeightMm);
+    const kMmH=porchetKFromVolume(volumeMl,durationMin,diameterMm,waterHeightMm);
+    const equivalent=volumeMl/((areaMm2/100)*durationMin)*600;
+    return {passed:Math.abs(kMmH-equivalent)<1e-12,areaMm2,kMmH,equivalent};
+  }
+
   const IMPLANTATION_OBJECTS = Object.freeze([
     { role:'parcel', label:'Parcelle', category:'base', geometry:'polygon', optional:false },
     { role:'available', label:'Zone disponible ANC', category:'base', geometry:'polygon', optional:false },
@@ -329,9 +373,9 @@
     add('WARNING','Sondages','Au moins un sondage', (state.boreholes||[]).length > 0);
     const porchets=state.porchets||[];
     add('WARNING','Porchet','Tests Porchet renseignés', porchets.length > 0);
-    const porchetReadings=porchets.flatMap(p=>p.readings||[]);
-    add('WARNING','Porchet','Unités et mesures principales renseignées', porchetReadings.length>0 && porchetReadings.every(r=>n(r.durationMin)!==undefined && n(r.volumeMl)!==undefined), porchetReadings.length?`${porchetReadings.length} relevé(s)`:'');
-    add('WARNING','Porchet','Niveaux départ / fin renseignés', porchetReadings.length>0 && porchetReadings.every(r=>n(r.startLevelCm)!==undefined && n(r.endLevelCm)!==undefined), 'Unités : cm');
+    const porchetMeasurements=porchets.flatMap(p=>(p.readings||[]).map(r=>({p,r})));
+    add('WARNING','Porchet','Unités et mesures principales renseignées', porchetMeasurements.length>0 && porchetMeasurements.every(x=>n(x.r.durationMin)!==undefined && porchetReadingVolumeMl(x.p,x.r)!==undefined), porchetMeasurements.length?`${porchetMeasurements.length} relevé(s)`:'');
+    add('WARNING','Porchet','Niveaux départ / fin renseignés', porchetMeasurements.length>0 && porchetMeasurements.every(x=>n(x.r.startLevelCm)!==undefined && n(x.r.endLevelCm)!==undefined), 'Unités : cm');
     add('INFO','Photos','Photos du chantier', (state.photos||[]).length > 0);
     add('INFO','Porchet','Photos d’essai Porchet', porchets.length===0 || (state.photos||[]).some(p=>p.targetType==='porchet'), 'Caméra / Galerie / Fichier disponibles');
     const requiredMaps=(state.maps||[]).filter(m=>m.requirement==='mandatory');
@@ -349,6 +393,12 @@
 
   window.ANCV3Core = {
     STATUS,
+    porchetWettedAreaMm2,
+    porchetVolumeFromGraduation,
+    porchetKFromVolume,
+    porchetKFromGraphicalFlow,
+    porchetReadingVolumeMl,
+    porchetEngineSelfTest,
     ensureV3,
     parcelTemplate,
     selectedParcels,
