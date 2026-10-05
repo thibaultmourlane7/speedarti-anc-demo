@@ -148,7 +148,7 @@
       clients:demoClientDirectory(),selectedClientId:'',clientDraft:blankClient(),geometry:defaultGeometry(),rules:ruleDefaults(),porchetSettings:{studyRetention:'minimum',stabilityCvPct:15,treatmentMin:15,infiltrationMin:10,maxPermeability:500,deviceMaxPermeability:360,formulaCrossChecked:true,formulaCrossCheckDate:'2026-10-05',protocolValidated:false,protocolValidationNote:'',protocolValidationDate:''},
       boreholes:[], porchets:[], photos:[], maps:mapTemplates(),
       solution:{family:'undecided',type:'',capacity:'',evacuation:'undecided',traditionalType:'',approvedType:'',rejectionReason:'',manufacturer:'',model:'',approvalNumber:'',intermittentCompatible:'unknown',pretreatment:'',lifting:'unknown',v1:'',v2:'',equipment:'',internalWorks:'',location:'',conclusion:'',worksText:'',rainwater:'Le système d’évacuation des eaux pluviales ne devra pas être raccordé au dispositif de traitement des eaux usées.',limitations:'',validated:false,validationDate:'',validatedBy:'',validationNote:''},
-      automation:{autoEh:true,lastGenerated:'',regulations:regulatoryDefaults(),mission:'Le bureau d’études a pour mission d’effectuer une reconnaissance des sols, d’évaluer l’aptitude du terrain à recevoir les eaux usées et de proposer une solution d’assainissement adaptée au projet.',exclusions:['L’attribution des autorisations administratives, permis ou dérogations.','Le contrôle technique, le suivi et la réception des travaux.','Le projet détaillé d’exécution, les moyens de construction et les dispositions constructives.','Une étude géotechnique de fondation de la construction.'],topography:'',hydrogeology:'',hydraulics:'',pedology:'',generatedConclusion:'',rationale:'',synthesis:'',evacuation:{recipient:'undecided',name:'',direction:'',authority:'',authorization:'unknown',reference:'',conditions:'',upstreamSlope:2},works:{passage:'unknown',vegetation:'unknown',cleaning:'unknown',internal:'unknown',internalText:'',special:'',manufacturer:true,floodCompatible:false,groundwaterCompatible:false},maintenance:{general:true,septic:true,prefilter:true,grease:false,lifting:false,treatment:true,guide:true,custom:''},annex3:{enabled:false,width:.7,depth:.4,spacing:3,length:'',distribution:true,text:'Tranchées d’infiltration à faible profondeur à répartir suivant la pente du terrain et les prescriptions validées par le bureau d’études.',validated:false}},
+      automation:{autoEh:true,lastGenerated:'',regulations:regulatoryDefaults(),mission:'Le bureau d’études a pour mission d’effectuer une reconnaissance des sols, d’évaluer l’aptitude du terrain à recevoir les eaux usées et de proposer une solution d’assainissement adaptée au projet.',exclusions:['L’attribution des autorisations administratives, permis ou dérogations.','Le contrôle technique, le suivi et la réception des travaux.','Le projet détaillé d’exécution, les moyens de construction et les dispositions constructives.','Une étude géotechnique de fondation de la construction.'],topography:'',hydrogeology:'',hydraulics:'',pedology:'',generatedConclusion:'',rationale:'',synthesis:'',evacuation:{recipient:'undecided',name:'',direction:'',authority:'',authorization:'unknown',reference:'',conditions:'',upstreamSlope:2},works:{passage:'unknown',vegetation:'unknown',cleaning:'unknown',internal:'unknown',internalText:'',special:'',manufacturer:true,floodCompatible:false,groundwaterCompatible:false},maintenance:{general:true,septic:true,prefilter:true,grease:false,lifting:false,treatment:true,guide:true,custom:''},infiltrationSizing:{enabled:false,profile:'Fred',source:'Profil métier Fred — paramètres à confirmer',version:'1.0',status:'TO_CONFIRM',useStudyEh:true,useStudyK:true,eh:'',consumptionLDayPerEh:120,peakCoefficient:2.5,operatingHoursPerDay:16,permeabilityMmH:'',safetyCoefficient:4,trenchCount:1,lastCalculatedAt:'',professionalValidated:false,validationNote:''},annex3:{enabled:false,width:.7,depth:.4,spacing:3,length:'',distribution:true,text:'Tranchées d’infiltration à faible profondeur à répartir suivant la pente du terrain et les prescriptions validées par le bureau d’études.',validated:false}},
       sync:{online:navigator.onLine,lastSyncAt:'',pendingChanges:0,connector:'local'},report:{coverPhoto:'',toc:true,regulatory:true,schematics:true,maintenance:true,synthesis:true,photos:true,maps:true,annexes:true,footer:'Rapport généré avec SpeedArti ANC — validation professionnelle obligatoire.'}
     };
   }
@@ -569,6 +569,29 @@
 
   function fmt(v,d=1){return num(v)===undefined?'—':Number(v).toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d})}
   function calculateEh(s=state){const b=s.building;if(b.sizingMethod==='manual'||b.disproportionate)return num(b.eh);const basis=b.sizingMethod==='capacity'?num(b.occupants):num(b.mainRooms);return basis?Math.max(1,Math.ceil(basis*(num(b.coefficient)||1))):undefined}
+
+  function infiltrationSizingResult(s=state){
+    const cfg=s.automation?.infiltrationSizing||{},a=s.automation?.annex3||{};
+    const effectiveEh=cfg.useStudyEh!==false?calculateEh(s):num(cfg.eh);
+    const effectiveK=cfg.useStudyK!==false?studyPermeability(s):num(cfg.permeabilityMmH);
+    if(!window.ANCV3Core?.calculateTreatedEffluentInfiltration)return{status:'INCOMPLETE',warnings:[{severity:'BLOCKING',code:'ENGINE_UNAVAILABLE',message:'Moteur infiltration indisponible.'}]};
+    return window.ANCV3Core.calculateTreatedEffluentInfiltration({
+      eh:effectiveEh,
+      consumptionLDayPerEh:cfg.consumptionLDayPerEh,
+      peakCoefficient:cfg.peakCoefficient,
+      operatingHoursPerDay:cfg.operatingHoursPerDay,
+      permeabilityMmH:effectiveK,
+      safetyCoefficient:cfg.safetyCoefficient,
+      trenchWidthM:a.width,
+      trenchDepthM:a.depth,
+      trenchSpacingM:a.spacing,
+      trenchCount:cfg.trenchCount,
+      adoptedTotalLengthM:a.length,
+      availableAreaM2:s.parcel?.availableArea,
+      minPermeabilityMmH:ruleValue('infiltration_k_min',num(s.porchetSettings?.infiltrationMin)??10,s),
+      maxPermeabilityMmH:ruleValue('permeability_k_max',num(s.porchetSettings?.maxPermeability)??500,s)
+    });
+  }
   function porchetAreaCm2(p){const areaMm2=window.ANCV3Core?.porchetWettedAreaMm2?.(num(p.diameterCm)*10,num(p.waterHeightCm)*10);return areaMm2===undefined?undefined:areaMm2/100}
   function readingVolumeMl(p,r){if(window.ANCV3Core?.porchetReadingVolumeMl)return window.ANCV3Core.porchetReadingVolumeMl(p,r);return num(r.volumeMl)}
   function rawReadingK(p,r){if(p.method!=='constant_level')return undefined;const V=readingVolumeMl(p,r),t=num(r.durationMin);if(V===undefined||!t)return undefined;if(window.ANCV3Core?.porchetKFromVolume)return window.ANCV3Core.porchetKFromVolume(V,t,num(p.diameterCm)*10,num(p.waterHeightCm)*10);const S=porchetAreaCm2(p);return S?V/(S*t)*600:undefined}
