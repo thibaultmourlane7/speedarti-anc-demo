@@ -376,6 +376,8 @@
     const porchetMeasurements=porchets.flatMap(p=>(p.readings||[]).map(r=>({p,r})));
     add('WARNING','Porchet','Unités et mesures principales renseignées', porchetMeasurements.length>0 && porchetMeasurements.every(x=>n(x.r.durationMin)!==undefined && porchetReadingVolumeMl(x.p,x.r)!==undefined), porchetMeasurements.length?`${porchetMeasurements.length} relevé(s)`:'');
     add('WARNING','Porchet','Niveaux départ / fin renseignés', porchetMeasurements.length>0 && porchetMeasurements.every(x=>n(x.r.startLevelCm)!==undefined && n(x.r.endLevelCm)!==undefined), 'Unités : cm');
+    add('WARNING','Porchet','Formule mathématique comparée à la source métier', state.porchetSettings?.formulaCrossChecked===true, state.porchetSettings?.formulaCrossCheckDate||'');
+    add('BLOCKING','Porchet','Protocole opératoire validé', state.porchetSettings?.protocolValidated===true, state.porchetSettings?.protocolValidationNote||'');
     add('INFO','Photos','Photos du chantier', (state.photos||[]).length > 0);
     add('INFO','Porchet','Photos d’essai Porchet', porchets.length===0 || (state.photos||[]).some(p=>p.targetType==='porchet'), 'Caméra / Galerie / Fichier disponibles');
     const requiredMaps=(state.maps||[]).filter(m=>m.requirement==='mandatory');
