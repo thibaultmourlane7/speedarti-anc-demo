@@ -164,7 +164,7 @@
         Math.abs(result.correctedDailyVolumeL-1500)<1e-9 &&
         Math.abs(result.requiredAreaM2-(25/3))<1e-9 &&
         result.wholeMeterCeilTotalLengthM===12 &&
-        result.actualAreaM2===8.4 &&
+        Math.abs(result.actualAreaM2-8.4)<1e-9 &&
         !result.warnings.some(w=>w.code==='DIMENSIONING_INCONSISTENCY'),
       result
     };
