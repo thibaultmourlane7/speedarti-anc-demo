@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'speedarti-anc-v3-20261001-map-display-fix';
+const CACHE_VERSION = 'speedarti-anc-v3-20261005-porchet-multimode';
 const SHELL = [
   './',
   './index.html',
